@@ -1,0 +1,312 @@
+@import "tailwindcss";
+
+/* ============================================
+   JUNIOR HEALING SCIENTIST — DESIGN SYSTEM
+   Dark Navy Theme · Child-Friendly · Magical
+   ============================================ */
+
+/* --- Design Tokens --- */
+:root {
+  /* Primary Backgrounds */
+  --color-bg-primary: #0D1B2A;
+  --color-bg-secondary: #1B2838;
+  --color-bg-card: rgba(27, 40, 56, 0.85);
+  --color-bg-overlay: rgba(13, 27, 42, 0.8);
+
+  /* Accent Colors (per spec Section 7) */
+  --color-gold: #FFD700;
+  --color-heal-green: #00FF88;
+  --color-ginger-red: #FF6B6B;
+  --color-tulsi-teal: #4ECDC4;
+
+  /* Text */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #A8B2C1;
+
+  /* Semantic */
+  --color-success: #00FF88;
+  --color-failure: #FF6B6B;
+  --glow-success: 0 0 20px rgba(0, 255, 136, 0.5);
+  --glow-failure: 0 0 20px rgba(255, 107, 107, 0.5);
+
+  /* Day-specific badge colors */
+  --color-day-1: #FFD700;
+  --color-day-2: #00C853;
+  --color-day-3: #FF6D00;
+  --color-day-4: #40C4FF;
+  --color-day-5: #FF8F00;
+  --color-day-6: #E040FB;
+  --color-day-7: #FFD700;
+
+  /* Typography */
+  --font-heading: 'Nunito', sans-serif;
+  --font-body: 'Nunito Sans', 'Nunito', sans-serif;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Border Radius — minimum 12px per spec */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-glow-gold: 0 0 20px rgba(255, 215, 0, 0.4);
+  --shadow-glow-green: 0 0 20px rgba(0, 255, 136, 0.4);
+
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 300ms ease-in-out;
+  --transition-slow: 500ms ease-in-out;
+}
+
+/* --- Global Reset & Base --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* --- Animated gradient background (spec: never flat static) --- */
+.bg-animated {
+  background: linear-gradient(
+    135deg,
+    #0D1B2A 0%,
+    #1B2838 30%,
+    #162032 60%,
+    #0D1B2A 100%
+  );
+  background-size: 400% 400%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* --- Typography --- */
+.font-heading {
+  font-family: var(--font-heading);
+  font-weight: 800;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #FFD700, #FFA000);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-heal {
+  background: linear-gradient(135deg, #00FF88, #4ECDC4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* --- Glassmorphism Card --- */
+.glass-card {
+  background: rgba(27, 40, 56, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+/* --- Button Styles --- */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-xl);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #0D1B2A;
+  background: linear-gradient(135deg, #FFD700, #FFA000);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  box-shadow: var(--shadow-glow-gold);
+  transition: all var(--transition-normal);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.6);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-xl);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--color-text-primary);
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.btn-secondary:hover {
+  border-color: var(--color-gold);
+  background: rgba(255, 215, 0, 0.1);
+}
+
+/* --- Animations --- */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 136, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(0, 255, 136, 0.7); }
+}
+
+@keyframes pulse-glow-gold {
+  0%, 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.7); }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-up {
+  0% { transform: translateY(30px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(180deg); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.03); }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-pulse-glow-gold { animation: pulse-glow-gold 2s ease-in-out infinite; }
+.animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
+.animate-wiggle { animation: wiggle 0.5s ease-in-out; }
+.animate-breathe { animation: breathe 3s ease-in-out infinite; }
+.animate-pop { animation: pop 0.4s ease-out forwards; }
+
+/* --- Touch-friendly hit targets (spec: min 44x44px) --- */
+button, [role="button"], .touchable {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* --- Mobile First Responsive --- */
+@media (max-width: 480px) {
+  html { font-size: 14px; }
+}
+
+@media (min-width: 768px) {
+  html { font-size: 16px; }
+}
+
+@media (min-width: 1024px) {
+  html { font-size: 18px; }
+}
+
+/* --- Game text minimum 18px on mobile (spec) --- */
+.game-text {
+  font-size: max(18px, 1rem);
+}
+
+/* --- Scrollbar (dark theme) --- */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
