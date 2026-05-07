@@ -1,5 +1,5 @@
 /**
- * useProgress.js — Hook to compute derived progress values
+ * useProgress.js — Derived progress values
  */
 import { useGameState } from './useGameState'
 
@@ -8,16 +8,21 @@ export function useProgress() {
 
   const totalDays = 7
   const completedCount = state.completedDays.length
-  const progressPercent = state.healingProgress
   const isGameComplete = completedCount >= totalDays
+
+  // Progress for today's stage (0-3)
+  const stageProgress = state.currentStage - 1
 
   return {
     totalDays,
     completedCount,
-    progressPercent,
+    healingProgress: state.healingProgress, // 0-100
     isGameComplete,
     currentDay: state.currentDay,
     currentStage: state.currentStage,
+    stageProgress,
     patientHealth: state.patientHealth,
+    completedDays: state.completedDays,
+    isDayComplete: (day) => state.completedDays.includes(day),
   }
 }
