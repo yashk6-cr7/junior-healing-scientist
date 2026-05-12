@@ -222,14 +222,14 @@ junior-healing-scientist/
 | Date | Task | Status |
 |------|------|--------|
 | 2026-05-07 | Task 1 — Project Setup | ✅ Complete |
-| | Task 2 — Game State Foundation | ⬜ Pending |
-| | Task 3 — Stage 1 (Meet & Diagnose) | ⬜ Pending |
-| | Task 4 — Stage 2 Day 1 (Haldi Milk) | ⬜ Pending |
-| | Task 5 — Particle Engine | ⬜ Pending |
-| | Task 6 — Stage 3 (Heal & Celebrate) | ⬜ Pending |
-| | Task 7 — Remaining Days (2-7) | ⬜ Pending |
-| | Task 8 — Polish (sounds, responsive) | ⬜ Pending |
-| | Task 9 — Deploy | ⬜ Pending |
+| 2026-05-07 | Task 2 — Game State Foundation | ✅ Complete |
+| 2026-05-07 | Task 3 — Stage 1 (Meet & Diagnose) | ✅ Complete |
+| 2026-05-07 | Task 4 — Stage 2 Day 1 (Haldi Milk) | ✅ Complete |
+| 2026-05-07 | Task 5 — Particle Engine | ✅ Complete |
+| 2026-05-07 | Task 6 — Stage 3 (Heal & Celebrate) | ✅ Complete |
+| 2026-05-08 | Task 7 — Remaining Days (2-7) | ✅ Complete |
+| 2026-05-08 | Task 8 — Polish (sounds, responsive) | 🚧 In Progress |
+| 2026-05-08 | Task 9 — Deploy | ⬜ Pending |
 
 ---
 

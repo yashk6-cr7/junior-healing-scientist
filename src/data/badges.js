@@ -1,87 +1,21 @@
 /**
- * badges.js — Badge definitions per Section 9 spec
- * Exactly matches the spec badge list.
+ * badges.js — Badge definitions for all 7 days + master badge
  */
-
-export const BADGES = [
-  {
-    id: 'turmeric_scientist',
-    name: 'Turmeric Scientist',
-    emoji: '🌟',
-    day: 1,
-    remedy: 'Haldi Milk',
-    color: '#FFD700',
-    description: 'Discovered the power of Curcumin!',
-  },
-  {
-    id: 'herb_explorer',
-    name: 'Herb Explorer',
-    emoji: '🌿',
-    day: 2,
-    remedy: 'Tulsi Drink',
-    color: '#00C853',
-    description: 'Unlocked Tulsi\'s healing secrets!',
-  },
-  {
-    id: 'spice_master',
-    name: 'Spice Master',
-    emoji: '🔥',
-    day: 3,
-    remedy: 'Ginger Honey',
-    color: '#FF6D00',
-    description: 'Combined Gingerol and Honey power!',
-  },
-  {
-    id: 'steam_wizard',
-    name: 'Steam Wizard',
-    emoji: '💨',
-    day: 4,
-    remedy: 'Steam Therapy',
-    color: '#40C4FF',
-    description: 'Mastered the power of steam!',
-  },
-  {
-    id: 'soup_chef',
-    name: 'Soup Chef',
-    emoji: '🍲',
-    day: 5,
-    remedy: 'Herbal Soup',
-    color: '#FF8F00',
-    description: 'Brewed the perfect healing soup!',
-  },
-  {
-    id: 'spice_blender',
-    name: 'Spice Blender',
-    emoji: '⭐',
-    day: 6,
-    remedy: 'Spice Mix',
-    color: '#E040FB',
-    description: 'Blended the Trikatu power mix!',
-  },
-  {
-    id: 'master_healer',
-    name: 'Master Healer',
-    emoji: '👑',
-    day: 7,
-    remedy: 'Kadha',
-    color: '#FFD700',
-    description: 'Created the ultimate Kadha!',
-  },
-  {
-    id: 'junior_healing_scientist',
-    name: 'Junior Healing Scientist',
-    emoji: '🏆',
-    day: 'all',
-    remedy: 'Complete Journey',
-    color: '#FFD700',
-    description: 'Completed the full healing journey!',
-  },
-]
-
-export function getBadgeById(id) {
-  return BADGES.find(b => b.id === id)
+export const BADGES = {
+  day1: { id: 'day1', name: 'Golden Shield',       emoji: '🛡️', color: 0xf5c842, description: 'Mastered the golden healing power of turmeric!' },
+  day2: { id: 'day2', name: 'Basil Guardian',      emoji: '🌿', color: 0x4caf7d, description: 'Unlocked the sacred immunity of holy basil!' },
+  day3: { id: 'day3', name: 'Throat Healer',       emoji: '🫚', color: 0xff8c42, description: 'Soothed Arjun\'s throat with ginger & honey!' },
+  day4: { id: 'day4', name: 'Steam Master',        emoji: '💨', color: 0x40c4ff, description: 'Cleared the pathways with healing steam!' },
+  day5: { id: 'day5', name: 'Immunity Chef',       emoji: '🍲', color: 0xff8f00, description: 'Cooked the ultimate immunity-boosting soup!' },
+  day6: { id: 'day6', name: 'Spice Alchemist',     emoji: '⭐', color: 0xe53935, description: 'Activated the triple-pepper amplifier!' },
+  day7: { id: 'day7', name: 'Master Healer',       emoji: '👑', color: 0xffd700, description: 'Combined all wisdom into the ultimate kadha!' },
+  master: { id: 'master', name: 'Junior Healing Scientist', emoji: '🏆', color: 0xffd700, description: 'Completed all 7 days — a true healing scientist!' },
 }
 
 export function getBadgeForDay(day) {
-  return BADGES.find(b => b.day === day)
+  return BADGES[`day${day}`] || null
+}
+
+export function getMasterBadge() {
+  return BADGES.master
 }

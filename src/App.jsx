@@ -1,89 +1,92 @@
 /**
- * App.jsx — Main app with stage routing
- * Routes between Stage 1 (Diagnose), Stage 2 (Prepare), Stage 3 (Heal).
- * Manages top-level layout with animated gradient background.
+ * App.jsx — Root component
+ * 
+ * Architecture:
+ * - #game-canvas: PixiJS renders ALL game visuals here
+ * - #ui-overlay: React renders UI chrome (HUD, buttons, text) on top
+ * - GameProvider: React context for state + localStorage persistence
+ * 
+ * All scenes are registered with SceneManager on mount.
  */
-import { AnimatePresence, motion } from 'framer-motion'
-import { useGameState } from './hooks/useGameState'
-import Stage1_Diagnose from './stages/Stage1_Diagnose'
-import Stage2_Prepare from './stages/Stage2_Prepare'
-import Stage3_Heal from './stages/Stage3_Heal'
-import SoundManager from './components/SoundManager'
-import ProgressBar from './components/ProgressBar'
+import { useEffect, useRef, useState } from 'react'
+import { GameProvider, useGame } from './state/GameContext'
+import { initPixiApp, destroyPixiApp, getPixiApp } from './engine/PixiApp'
+import { SceneManager } from './engine/SceneManager'
+import UIOverlay from './ui/UIOverlay'
 
-const stageComponents = {
-  1: Stage1_Diagnose,
-  2: Stage2_Prepare,
-  3: Stage3_Heal,
+// Import all scene factories
+import { createHomeScene } from './scenes/HomeScene'
+import { createSymptomScene } from './scenes/SymptomScene'
+import { createDiscoveryScene } from './scenes/DiscoveryScene'
+import { createPreparationScene } from './scenes/PreparationScene'
+import { createDosageScene } from './scenes/DosageScene'
+import { createMicroscopeScene } from './scenes/MicroscopeScene'
+import { createSTEAMScene } from './scenes/STEAMScene'
+import { createHealingScene } from './scenes/HealingScene'
+
+// Register all scenes
+SceneManager.register('home', createHomeScene)
+SceneManager.register('symptoms', createSymptomScene)
+SceneManager.register('discovery', createDiscoveryScene)
+SceneManager.register('preparation', createPreparationScene)
+SceneManager.register('dosage', createDosageScene)
+SceneManager.register('microscope', createMicroscopeScene)
+SceneManager.register('steam', createSTEAMScene)
+SceneManager.register('healing', createHealingScene)
+
+function GameCanvas() {
+  const canvasRef = useRef(null)
+  const { state, dispatch } = useGame()
+  const [ready, setReady] = useState(false)
+
+  // Initialize PixiJS once
+  useEffect(() => {
+    let cancelled = false
+
+    const setup = async () => {
+      if (!canvasRef.current) return
+
+      try {
+        const pixiApp = await initPixiApp(canvasRef.current)
+        if (cancelled || !pixiApp) return
+
+        SceneManager.init(pixiApp, state, dispatch)
+        await SceneManager.goTo(state.currentStage || 'home')
+        setReady(true)
+      } catch (err) {
+        console.error('PixiJS init failed:', err)
+      }
+    }
+    setup()
+
+    return () => {
+      cancelled = true
+      // Don't destroy on StrictMode remount — only on real unmount
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // React to stage changes
+  useEffect(() => {
+    if (ready && SceneManager.isReady()) {
+      SceneManager.goTo(state.currentStage || 'home')
+    }
+  }, [state.currentStage, ready])
+
+  // Sync state to SceneManager whenever it changes
+  useEffect(() => {
+    if (ready && SceneManager.isReady()) {
+      SceneManager.syncState(state, dispatch)
+    }
+  }, [state, dispatch, ready])
+
+  return <div id="game-canvas" ref={canvasRef} />
 }
 
-const pageTransition = {
-  initial: { opacity: 0, x: 60 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -60 },
-  transition: { duration: 0.4, ease: 'easeInOut' },
-}
-
-function App() {
-  const { state } = useGameState()
-  const StageComponent = stageComponents[state.currentStage] || Stage1_Diagnose
-
+export default function App() {
   return (
-    <div className="bg-animated" style={{ minHeight: '100dvh', position: 'relative' }}>
-      {/* Sound toggle */}
-      <SoundManager />
-
-      {/* Day indicator */}
-      <div style={{
-        position: 'fixed',
-        top: '16px',
-        left: '16px',
-        zIndex: 50,
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '8px 16px',
-        borderRadius: 'var(--radius-full)',
-        background: 'rgba(27, 40, 56, 0.8)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        fontSize: '0.85rem',
-        color: 'var(--color-text-secondary)',
-      }}>
-        <span style={{ color: 'var(--color-gold)' }}>Day {state.currentDay}</span>
-        <span>/ 7</span>
-      </div>
-
-      {/* Stage content with page transitions */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`${state.currentStage}-${state.currentDay}`}
-          {...pageTransition}
-          style={{ minHeight: '100dvh' }}
-        >
-          <StageComponent />
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Bottom progress bar */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 40,
-        background: 'rgba(13, 27, 42, 0.9)',
-        backdropFilter: 'blur(8px)',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-      }}>
-        <ProgressBar
-          progress={state.healingProgress}
-          color="#00FF88"
-          label="Healing Progress"
-        />
-      </div>
-    </div>
+    <GameProvider>
+      <GameCanvas />
+      <UIOverlay />
+    </GameProvider>
   )
 }
-
-export default App
