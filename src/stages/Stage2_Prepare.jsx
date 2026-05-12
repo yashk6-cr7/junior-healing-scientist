@@ -32,10 +32,14 @@ export default function Stage2_Prepare() {
   const [addedIngredients, setAddedIngredients] = useState([])
   const [wrongItem, setWrongItem] = useState(null)
   const [wrongMsg, setWrongMsg] = useState('')
-  const [phase, setPhase] = useState('select') // select → microscope → done
+  const [phase, setPhase] = useState('select') // select → stir → heat → microscope → done
   const [bowlItems, setBowlItems] = useState([])
+  const [stirProgress, setStirProgress] = useState(0)
+  const [temperature, setTemperature] = useState(25)
+  const [isHeating, setIsHeating] = useState(false)
   const canvasRef = useRef(null)
   const animRef = useRef(null)
+  const heatInterval = useRef(null)
 
   const isAdded = useCallback((id) => addedIngredients.includes(id), [addedIngredients])
 
@@ -68,12 +72,40 @@ export default function Stage2_Prepare() {
     setWrongMsg('')
   }
 
-  // Watch for completion → microscope
+  // Watch for completion → stir
   useEffect(() => {
     if (isComplete && phase === 'select') {
-      setTimeout(() => setPhase('microscope'), 1000)
+      setTimeout(() => setPhase('stir'), 1000)
     }
   }, [isComplete, phase])
+
+  // Stir complete → heat
+  useEffect(() => {
+    if (phase === 'stir' && stirProgress >= 100) {
+      setTimeout(() => setPhase('heat'), 500)
+    }
+  }, [phase, stirProgress])
+
+  // Heat complete → microscope
+  useEffect(() => {
+    if (phase === 'heat' && temperature >= 85) {
+      setTimeout(() => setPhase('microscope'), 800)
+    }
+  }, [phase, temperature])
+
+  // Heating interval
+  useEffect(() => {
+    if (isHeating && phase === 'heat') {
+      heatInterval.current = setInterval(() => {
+        setTemperature(t => Math.min(90, t + 1.2))
+      }, 80)
+    } else {
+      if (heatInterval.current) clearInterval(heatInterval.current)
+    }
+    return () => { if (heatInterval.current) clearInterval(heatInterval.current) }
+  }, [isHeating, phase])
+
+  const tempLabel = temperature < 40 ? '❄️ Cold' : temperature < 65 ? '🌡️ Warm' : temperature < 85 ? '🔥 Hot' : '✨ Perfect!'
 
   // ─── Microscope Canvas ───
   useEffect(() => {
@@ -190,6 +222,136 @@ export default function Stage2_Prepare() {
   }
 
   if (!remedy) return null
+
+  // Step indicator component
+  const stepNum = phase === 'select' ? 1 : phase === 'stir' ? 2 : phase === 'heat' ? 3 : 4
+  const StepIndicator = () => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+      {[{ n: 1, label: 'Find' }, { n: 2, label: 'Stir' }, { n: 3, label: 'Heat' }].map((s, i) => (
+        <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '0.75rem', fontWeight: 700,
+            background: stepNum > s.n ? '#00C853' : stepNum === s.n ? remedy.color : 'rgba(255,255,255,0.1)',
+            color: stepNum >= s.n ? 'white' : 'rgba(255,255,255,0.4)',
+            border: `2px solid ${stepNum > s.n ? '#00C853' : stepNum === s.n ? remedy.color : 'rgba(255,255,255,0.15)'}`,
+          }}>
+            {stepNum > s.n ? '✓' : s.n}
+          </div>
+          <span style={{ fontSize: '0.75rem', color: stepNum >= s.n ? 'var(--color-text-primary)' : 'rgba(255,255,255,0.3)' }}>{s.label}</span>
+          {i < 2 && <span style={{ color: 'rgba(255,255,255,0.15)', margin: '0 4px' }}>—</span>}
+        </div>
+      ))}
+    </div>
+  )
+
+  // ═══ STIR PHASE ═══
+  if (phase === 'stir') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', padding: '72px 16px 100px', gap: '16px' }}>
+        <h2 className="font-heading" style={{ color: remedy.color, fontSize: 'clamp(1.2rem, 4vw, 1.6rem)' }}>
+          🧪 Prepare the Remedy
+        </h2>
+        <p className="game-text" style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+          Find the right ingredients, mix them, and heat to the perfect temperature!
+        </p>
+        <StepIndicator />
+        <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>Stir the mixture! Tap rapidly 🥄</p>
+        <div style={{ position: 'relative', width: '160px', height: '160px' }}>
+          <svg viewBox="0 0 160 160" style={{ width: '100%', height: '100%' }}>
+            <circle cx="80" cy="80" r="65" fill={`${remedy.color}22`} stroke={`${remedy.color}66`} strokeWidth="3" />
+            <motion.line x1="80" y1="80" x2="80" y2="20"
+              animate={{ rotate: stirProgress * 3.6 }}
+              style={{ originX: '80px', originY: '80px' }}
+              stroke="#8D6E63" strokeWidth="6" strokeLinecap="round" />
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: '1.2rem', fontWeight: 700, color: remedy.color }}>{Math.round(stirProgress)}%</span>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {bowlItems.map(item => <span key={item.id} style={{ fontSize: '1.5rem' }}>{item.emoji}</span>)}
+        </div>
+        <button className="btn-primary" onClick={() => setStirProgress(p => Math.min(100, p + 6))}
+          style={{ padding: '14px 40px', fontSize: '1.1rem' }}>
+          🥄 Stir!
+        </button>
+      </div>
+    )
+  }
+
+  // ═══ HEAT PHASE — Thermometer ═══
+  if (phase === 'heat') {
+    const fillH = Math.max(0, ((temperature - 20) / 70) * 200)
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', padding: '72px 16px 100px', gap: '12px' }}>
+        <h2 className="font-heading" style={{ color: remedy.color, fontSize: 'clamp(1.2rem, 4vw, 1.6rem)' }}>
+          🧪 Prepare the Remedy
+        </h2>
+        <p className="game-text" style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+          Find the right ingredients, mix them, and heat to the perfect temperature!
+        </p>
+        <StepIndicator />
+        <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>Hold the flame to heat! Find the sweet spot 🔥</p>
+        <p style={{ color: remedy.color, fontSize: '2rem', fontWeight: 800 }}>{Math.round(temperature)}°C</p>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>{tempLabel}</p>
+
+        {/* Thermometer */}
+        <div style={{ position: 'relative', width: '50px', height: '220px' }}>
+          {/* Tube */}
+          <div style={{
+            position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+            width: '28px', height: '200px', bottom: '20px',
+            borderRadius: '14px', background: 'rgba(255,255,255,0.08)',
+            border: '2px solid rgba(255,255,255,0.15)', overflow: 'hidden',
+          }}>
+            {/* Fill */}
+            <div style={{
+              position: 'absolute', bottom: 0, width: '100%', height: `${fillH}px`,
+              background: temperature < 50 ? '#40C4FF' : temperature < 75 ? '#FFB74D' : '#FF5722',
+              transition: 'height 0.1s, background 0.3s',
+              borderRadius: '0 0 12px 12px',
+            }} />
+            {/* Tick marks */}
+            {[25, 50, 75].map(t => (
+              <div key={t} style={{
+                position: 'absolute', bottom: `${((t - 20) / 70) * 200}px`, width: '100%', height: '1px',
+                borderTop: '1px dashed rgba(255,255,255,0.2)',
+              }} />
+            ))}
+          </div>
+          {/* Bulb */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+            width: '36px', height: '36px', borderRadius: '50%',
+            background: temperature < 50 ? '#40C4FF' : temperature < 75 ? '#FFB74D' : '#FF5722',
+            transition: 'background 0.3s',
+          }} />
+        </div>
+
+        {/* Ingredient icons */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          {bowlItems.map(item => <span key={item.id} style={{ fontSize: '1.5rem' }}>{item.emoji}</span>)}
+        </div>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>Hold the flame to heat!</p>
+
+        {/* Flame button */}
+        <motion.button
+          onMouseDown={() => setIsHeating(true)} onMouseUp={() => setIsHeating(false)} onMouseLeave={() => setIsHeating(false)}
+          onTouchStart={() => setIsHeating(true)} onTouchEnd={() => setIsHeating(false)}
+          whileTap={{ scale: 0.9 }}
+          style={{
+            width: '72px', height: '72px', borderRadius: '50%', fontSize: '2rem',
+            background: isHeating ? 'rgba(255,109,0,0.4)' : 'rgba(255,109,0,0.15)',
+            border: `3px solid ${isHeating ? '#FF6D00' : 'rgba(255,109,0,0.3)'}`,
+            cursor: 'pointer', transition: 'all 0.2s',
+            boxShadow: isHeating ? '0 0 30px rgba(255,109,0,0.5)' : 'none',
+          }}>
+          🔥
+        </motion.button>
+      </div>
+    )
+  }
 
   // ═══ MICROSCOPE PHASE ═══
   if (phase === 'microscope') {
