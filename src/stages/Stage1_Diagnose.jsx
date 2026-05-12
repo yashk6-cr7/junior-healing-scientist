@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import PatientCharacter from '../components/PatientCharacter'
 import { SYMPTOMS } from '../data/symptoms'
 import { getRemedyByDay } from '../data/remedies'
+import { MYSTERY_HINTS } from '../data/hints'
 import { useGameState } from '../hooks/useGameState'
 import { ACTIONS } from '../context/GameContext'
 import { useSound, SOUNDS } from '../hooks/useSound'
@@ -115,84 +116,93 @@ function SymptomIcon({ symptom, isInvestigated, onTap, orbitRadius, angle }) {
   )
 }
 
-// ─── Diagnosis reveal card ────────────────────────────────────────────────────
-function DiagnosisCard({ remedy, onContinue }) {
+// ─── Mystery Remedy Card ─────────────────────────────────────────────────────
+function MysteryRemedyCard({ day, onContinue }) {
+  const hint = MYSTERY_HINTS[day]
+  if (!hint) return null
+
   return (
     <motion.div
       initial={{ y: 60, opacity: 0, scale: 0.9 }}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-      className="glass-card"
       style={{
-        padding: '24px 20px',
-        width: '100%',
-        maxWidth: 380,
-        textAlign: 'center',
-        border: `1px solid ${remedy.color}44`,
-        boxShadow: `0 0 30px ${remedy.color}22`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        width: '100%', maxWidth: 500, gap: '16px',
       }}
     >
+      {/* Big icon in glowing circle */}
       <motion.div
-        animate={{ rotate: [0, -5, 5, -3, 3, 0] }}
-        transition={{ duration: 0.6, delay: 0.2 }}
-        style={{ fontSize: '3rem', marginBottom: 8 }}
-      >
-        {remedy.icon}
+        animate={{ scale: [1, 1.05, 1] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        style={{
+          width: 80, height: 80, borderRadius: '50%',
+          background: `${hint.iconBg}33`,
+          border: `3px solid ${hint.iconBg}66`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '2.2rem',
+          boxShadow: `0 0 30px ${hint.iconBg}33`,
+        }}>
+        {hint.icon}
       </motion.div>
 
-      <h3 className="font-heading" style={{ color: remedy.color, fontSize: '1.3rem', marginBottom: 6 }}>
-        Today's Remedy!
-      </h3>
-      <p style={{ color: 'var(--color-text-primary)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 4 }}>
-        {remedy.name}
-      </p>
-      <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem', marginBottom: 16, lineHeight: 1.5 }}>
-        {remedy.description}
-      </p>
-
-      {/* Ingredient preview */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        {remedy.ingredients.map(ing => (
-          <motion.div
-            key={ing.id}
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', delay: 0.1 }}
+      {/* Keyword tags */}
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+        {hint.tags.map((tag, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 + i * 0.15 }}
             style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <div style={{
-              width: 44,
-              height: 44,
-              borderRadius: '50%',
-              background: `${ing.color}22`,
-              border: `2px solid ${ing.color}55`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.4rem',
+              padding: '8px 16px', borderRadius: '20px',
+              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              fontSize: '0.85rem', color: 'var(--color-text-primary)',
             }}>
-              {ing.emoji}
-            </div>
-            <span style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', maxWidth: 52, textAlign: 'center', lineHeight: 1.2 }}>
-              {ing.name}
+            <span>{tag.emoji}</span>
+            <span style={{ fontWeight: 600 }}>{tag.label}</span>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Riddle */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+        className="glass-card"
+        style={{
+          padding: '20px 24px', width: '100%', textAlign: 'center',
+          border: '1px solid rgba(255,215,0,0.2)',
+        }}>
+        <p style={{
+          color: 'var(--color-text-secondary)', fontSize: '0.95rem',
+          fontStyle: 'italic', lineHeight: 1.6,
+        }}>
+          {hint.riddle}
+        </p>
+      </motion.div>
+
+      {/* Visual clue cards */}
+      <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+        {hint.clues.map((clue, i) => (
+          <motion.div key={i} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 1 + i * 0.2 }}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+              padding: '12px 16px', borderRadius: '12px',
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+            }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: '8px',
+              background: clue.color, border: '2px solid rgba(255,255,255,0.15)',
+            }} />
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+              {clue.label}
             </span>
           </motion.div>
         ))}
       </div>
 
-      <motion.button
-        id="diagnose-continue-btn"
-        className="btn-primary"
-        onClick={onContinue}
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.97 }}
-        style={{ width: '100%', fontSize: '1rem' }}
-      >
+      {/* Continue button */}
+      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }}
+        className="btn-primary" onClick={onContinue}
+        style={{ width: '100%', maxWidth: 350, fontSize: '1rem', marginTop: '8px' }}>
         Let's Prepare It! →
       </motion.button>
     </motion.div>
@@ -265,12 +275,14 @@ export default function Stage1_Diagnose() {
           color: 'var(--color-gold)',
           marginBottom: 4,
         }}>
-          Day {state.currentDay} — Meet Arjun
+          {showDiagnosis ? '🧩 Mystery Remedy' : `Day ${state.currentDay} — Meet Arjun`}
         </h1>
         <p className="game-text" style={{ color: 'var(--color-text-secondary)', fontSize: 'clamp(0.85rem, 3vw, 1rem)' }}>
-          {allInvestigated
-            ? '✅ You found all the symptoms!'
-            : `Tap the glowing icons to investigate! (${investigated.size}/${SYMPTOM_POSITIONS.length})`}
+          {showDiagnosis
+            ? 'Can you figure out what Arjun needs today?'
+            : allInvestigated
+              ? '✅ You found all the symptoms!'
+              : `Tap the glowing icons to investigate! (${investigated.size}/${SYMPTOM_POSITIONS.length})`}
         </p>
       </motion.div>
 
@@ -336,10 +348,10 @@ export default function Stage1_Diagnose() {
         )}
       </AnimatePresence>
 
-      {/* ── Diagnosis card ── */}
+      {/* ── Mystery Remedy card ── */}
       <AnimatePresence>
         {showDiagnosis && (
-          <DiagnosisCard remedy={remedy} onContinue={handleContinue} />
+          <MysteryRemedyCard day={state.currentDay} onContinue={handleContinue} />
         )}
       </AnimatePresence>
 

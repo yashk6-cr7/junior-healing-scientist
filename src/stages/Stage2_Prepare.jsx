@@ -256,26 +256,43 @@ export default function Stage2_Prepare() {
           Find the right ingredients, mix them, and heat to the perfect temperature!
         </p>
         <StepIndicator />
-        <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>Stir the mixture! Tap rapidly 🥄</p>
-        <div style={{ position: 'relative', width: '160px', height: '160px' }}>
-          <svg viewBox="0 0 160 160" style={{ width: '100%', height: '100%' }}>
-            <circle cx="80" cy="80" r="65" fill={`${remedy.color}22`} stroke={`${remedy.color}66`} strokeWidth="3" />
-            <motion.line x1="80" y1="80" x2="80" y2="20"
-              animate={{ rotate: stirProgress * 3.6 }}
-              style={{ originX: '80px', originY: '80px' }}
-              stroke="#8D6E63" strokeWidth="6" strokeLinecap="round" />
-          </svg>
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ fontSize: '1.2rem', fontWeight: 700, color: remedy.color }}>{Math.round(stirProgress)}%</span>
+        <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>Draw circles in the bowl to mix! 🌀</p>
+
+        {/* Golden bowl with spiral */}
+        <motion.div
+          onPointerDown={() => setStirProgress(p => Math.min(100, p + 5))}
+          onClick={() => setStirProgress(p => Math.min(100, p + 5))}
+          whileTap={{ scale: 0.95 }}
+          style={{
+            width: '200px', height: '200px', borderRadius: '50%', cursor: 'pointer',
+            background: `radial-gradient(circle at 40% 40%, ${remedy.color}44, ${remedy.color}22)`,
+            border: `3px solid ${remedy.color}66`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: `0 0 40px ${remedy.color}22`,
+            position: 'relative',
+          }}>
+          <motion.span
+            animate={{ rotate: stirProgress * 7.2 }}
+            style={{ fontSize: '3rem' }}>
+            🌀
+          </motion.span>
+        </motion.div>
+
+        {/* Progress bar */}
+        <div style={{ width: '200px' }}>
+          <div style={{
+            width: '100%', height: '8px', borderRadius: '4px',
+            background: 'rgba(255,255,255,0.1)',
+          }}>
+            <div style={{
+              width: `${stirProgress}%`, height: '100%', borderRadius: '4px',
+              background: remedy.color, transition: 'width 0.15s',
+            }} />
           </div>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', textAlign: 'center', marginTop: '6px' }}>
+            Mix: {Math.round(stirProgress)}%
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {bowlItems.map(item => <span key={item.id} style={{ fontSize: '1.5rem' }}>{item.emoji}</span>)}
-        </div>
-        <button className="btn-primary" onClick={() => setStirProgress(p => Math.min(100, p + 6))}
-          style={{ padding: '14px 40px', fontSize: '1.1rem' }}>
-          🥄 Stir!
-        </button>
       </div>
     )
   }
