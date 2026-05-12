@@ -1,8 +1,7 @@
 /**
  * ParticleCanvas.jsx — Three.js particle canvas wrapper
- * Mounts a Three.js scene into a React component.
- * Handles canvas resize and cleanup.
- * Will be fully connected to ParticleEngine in Task 5.
+ * Maps day number to the correct particle scene builder.
+ * Handles React mount/unmount lifecycle cleanly.
  */
 import { useRef, useEffect } from 'react'
 
@@ -12,15 +11,19 @@ export default function ParticleCanvas({ sceneBuilder, day = 1, style = {} }) {
 
   useEffect(() => {
     const container = containerRef.current
-    if (!container) return
+    if (!container || !sceneBuilder) return
 
-    // sceneBuilder will be a function that creates and starts the Three.js scene
-    // It returns a cleanup function
-    if (sceneBuilder) {
-      cleanupRef.current = sceneBuilder(container, day)
-    }
+    // Small delay to ensure container has dimensions
+    const timer = setTimeout(() => {
+      try {
+        cleanupRef.current = sceneBuilder(container)
+      } catch (e) {
+        console.warn('ParticleCanvas: scene creation failed:', e)
+      }
+    }, 50)
 
     return () => {
+      clearTimeout(timer)
       if (cleanupRef.current) {
         cleanupRef.current()
         cleanupRef.current = null
