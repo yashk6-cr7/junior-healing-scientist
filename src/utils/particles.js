@@ -12,11 +12,11 @@ export function randomInSphere(radius) {
   const theta = 2 * Math.PI * u
   const phi = Math.acos(2 * v - 1)
   const r = radius * Math.cbrt(Math.random())
-  return {
-    x: r * Math.sin(phi) * Math.cos(theta),
-    y: r * Math.sin(phi) * Math.sin(theta),
-    z: r * Math.cos(phi),
-  }
+  return [
+    r * Math.sin(phi) * Math.cos(theta),
+    r * Math.sin(phi) * Math.sin(theta),
+    r * Math.cos(phi),
+  ]
 }
 
 /**
