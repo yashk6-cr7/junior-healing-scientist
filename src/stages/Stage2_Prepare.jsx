@@ -107,115 +107,177 @@ export default function Stage2_Prepare() {
 
   const tempLabel = temperature < 40 ? '❄️ Cold' : temperature < 65 ? '🌡️ Warm' : temperature < 85 ? '🔥 Hot' : '✨ Perfect!'
 
-  // ─── Microscope Canvas ───
+  // ─── Interactive Microscope Canvas ───
+  const bacteriaRef = useRef([])
+  const curRef = useRef([])
+  const pointerRef = useRef({ x: -999, y: -999, active: false })
+  const [bacteriaKilled, setBacteriaKilled] = useState(0)
+  const TOTAL_BACTERIA = 12
+
   useEffect(() => {
     if (phase !== 'microscope' || !canvasRef.current) return
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
     const W = canvas.width, H = canvas.height
 
-    // Curcumin cluster (gold) — starts center, diffuses out
-    const curcumins = Array.from({ length: 80 }, (_, i) => {
-      const angle = Math.random() * Math.PI * 2
-      const dist = Math.random() * 20
-      return {
-        x: W / 2 + Math.cos(angle) * dist,
-        y: H / 2 + Math.sin(angle) * dist,
-        tx: W * 0.1 + Math.random() * W * 0.8,
-        ty: H * 0.1 + Math.random() * H * 0.8,
-        r: 2 + Math.random() * 3,
-        glow: 0.5 + Math.random() * 0.5,
-      }
-    })
+    // Init bacteria (red enemies)
+    bacteriaRef.current = Array.from({ length: TOTAL_BACTERIA }, (_, i) => ({
+      id: i,
+      x: 60 + Math.random() * (W - 120),
+      y: 60 + Math.random() * (H - 120),
+      r: 14 + Math.random() * 8,
+      vx: (Math.random() - 0.5) * 0.6,
+      vy: (Math.random() - 0.5) * 0.6,
+      alive: true,
+      deathAlpha: 1,
+      pulse: Math.random() * Math.PI * 2,
+    }))
 
-    // Milk molecules (white/cream)
-    const milks = Array.from({ length: 120 }, () => ({
+    // Curcumin healing particles (gold — follow pointer cluster)
+    curRef.current = Array.from({ length: 60 }, () => ({
+      x: W / 2 + (Math.random() - 0.5) * 40,
+      y: H / 2 + (Math.random() - 0.5) * 40,
+      r: 3 + Math.random() * 3,
+      ox: (Math.random() - 0.5) * 30, // orbit offset from pointer
+      oy: (Math.random() - 0.5) * 30,
+      glow: 0.6 + Math.random() * 0.4,
+    }))
+
+    // Milk drift particles
+    const milks = Array.from({ length: 80 }, () => ({
       x: Math.random() * W, y: Math.random() * H,
-      r: 1.5 + Math.random() * 2.5,
-      vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
-      alpha: 0.3 + Math.random() * 0.5,
+      r: 1.5 + Math.random() * 2,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      alpha: 0.2 + Math.random() * 0.35,
     }))
 
     let frame = 0
-    const startTime = Date.now()
+    let killed = 0
+
+    // Pointer event handlers on canvas
+    const handleMove = (e) => {
+      const rect = canvas.getBoundingClientRect()
+      const scaleX = W / rect.width, scaleY = H / rect.height
+      const cx = (e.touches ? e.touches[0].clientX : e.clientX)
+      const cy = (e.touches ? e.touches[0].clientY : e.clientY)
+      pointerRef.current = { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY, active: true }
+    }
+    const handleLeave = () => { pointerRef.current.active = false }
+    canvas.addEventListener('mousemove', handleMove)
+    canvas.addEventListener('touchmove', handleMove, { passive: true })
+    canvas.addEventListener('mouseleave', handleLeave)
+    canvas.addEventListener('touchend', handleLeave)
 
     function draw() {
       frame++
-      const elapsed = (Date.now() - startTime) / 1000
-
-      // Background
-      ctx.fillStyle = '#0D1117'
+      ctx.fillStyle = '#0a0f1a'
       ctx.fillRect(0, 0, W, H)
 
-      // Subtle vignette
-      const vignette = ctx.createRadialGradient(W/2, H/2, W*0.2, W/2, H/2, W*0.7)
-      vignette.addColorStop(0, 'rgba(0,0,0,0)')
-      vignette.addColorStop(1, 'rgba(0,0,0,0.4)')
-      ctx.fillStyle = vignette
-      ctx.fillRect(0, 0, W, H)
+      // Vignette
+      const vig = ctx.createRadialGradient(W/2, H/2, W*0.2, W/2, H/2, W*0.72)
+      vig.addColorStop(0, 'rgba(0,0,0,0)')
+      vig.addColorStop(1, 'rgba(0,0,0,0.5)')
+      ctx.fillStyle = vig; ctx.fillRect(0, 0, W, H)
 
-      // Milk molecules — ambient drift
+      // Milk molecules
       milks.forEach(m => {
-        m.x += m.vx + Math.sin(frame * 0.01 + m.y * 0.01) * 0.1
-        m.y += m.vy + Math.cos(frame * 0.01 + m.x * 0.01) * 0.1
+        m.x += m.vx + Math.sin(frame * 0.01 + m.y * 0.01) * 0.08
+        m.y += m.vy + Math.cos(frame * 0.01 + m.x * 0.01) * 0.08
         if (m.x < 0) m.x = W; if (m.x > W) m.x = 0
         if (m.y < 0) m.y = H; if (m.y > H) m.y = 0
-
-        // Glow
-        const grad = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r * 3)
-        grad.addColorStop(0, `rgba(255,255,255,${m.alpha * 0.6})`)
-        grad.addColorStop(1, 'rgba(255,255,255,0)')
-        ctx.beginPath()
-        ctx.arc(m.x, m.y, m.r * 3, 0, Math.PI * 2)
-        ctx.fillStyle = grad
-        ctx.fill()
-
-        ctx.beginPath()
-        ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(230,230,230,${m.alpha})`
-        ctx.fill()
+        ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(220,220,230,${m.alpha})`; ctx.fill()
       })
 
-      // Curcumin particles — diffuse from center after 2s
-      const diffuseT = Math.min(1, Math.max(0, (elapsed - 1.5) / 3))
-      curcumins.forEach(p => {
-        p.x += (p.tx - p.x) * diffuseT * 0.012
-        p.y += (p.ty - p.y) * diffuseT * 0.012
-        p.glow = 0.5 + Math.sin(frame * 0.03 + p.x * 0.02) * 0.3
+      // Bacteria
+      bacteriaRef.current.forEach(b => {
+        if (!b.alive) {
+          // Death flash
+          b.deathAlpha -= 0.05
+          if (b.deathAlpha > 0) {
+            ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 2, 0, Math.PI * 2)
+            ctx.fillStyle = `rgba(255,100,0,${b.deathAlpha * 0.5})`; ctx.fill()
+            ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 0.5, 0, Math.PI * 2)
+            ctx.fillStyle = `rgba(255,255,100,${b.deathAlpha})`; ctx.fill()
+          }
+          return
+        }
+        b.pulse += 0.04
+        b.x += b.vx; b.y += b.vy
+        if (b.x < b.r || b.x > W - b.r) b.vx *= -1
+        if (b.y < b.r || b.y > H - b.r) b.vy *= -1
 
-        // Big glow halo
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 5)
-        grad.addColorStop(0, `rgba(255,215,0,${0.7 * p.glow})`)
-        grad.addColorStop(0.5, `rgba(255,180,0,${0.2 * p.glow})`)
-        grad.addColorStop(1, 'rgba(255,215,0,0)')
+        const pulseR = b.r + Math.sin(b.pulse) * 2
+        // Bacteria glow
+        const bg = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, pulseR * 3)
+        bg.addColorStop(0, 'rgba(220,50,50,0.5)')
+        bg.addColorStop(1, 'rgba(220,50,50,0)')
+        ctx.beginPath(); ctx.arc(b.x, b.y, pulseR * 3, 0, Math.PI * 2)
+        ctx.fillStyle = bg; ctx.fill()
+        // Body
+        ctx.beginPath(); ctx.arc(b.x, b.y, pulseR, 0, Math.PI * 2)
+        ctx.fillStyle = '#C62828'; ctx.fill()
+        ctx.strokeStyle = '#EF9A9A'; ctx.lineWidth = 1.5; ctx.stroke()
+        // Flagella
         ctx.beginPath()
-        ctx.arc(p.x, p.y, p.r * 5, 0, Math.PI * 2)
-        ctx.fillStyle = grad
-        ctx.fill()
-
-        // Core
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(255,215,0,${0.9})`
-        ctx.fill()
+        ctx.moveTo(b.x + pulseR, b.y)
+        ctx.bezierCurveTo(b.x + pulseR + 12, b.y - 6 + Math.sin(frame * 0.08 + b.id) * 4,
+          b.x + pulseR + 18, b.y + 4, b.x + pulseR + 22, b.y + Math.sin(frame * 0.06) * 3)
+        ctx.strokeStyle = 'rgba(239,154,154,0.5)'; ctx.lineWidth = 1.2; ctx.stroke()
       })
 
-      // Central curcumin cluster glow (fades as it diffuses)
-      if (diffuseT < 0.8) {
-        const centerGlow = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, 60 - diffuseT * 30)
-        centerGlow.addColorStop(0, `rgba(255,255,0,${0.4 * (1 - diffuseT)})`)
-        centerGlow.addColorStop(1, 'rgba(255,215,0,0)')
-        ctx.beginPath()
-        ctx.arc(W/2, H/2, 60, 0, Math.PI * 2)
-        ctx.fillStyle = centerGlow
-        ctx.fill()
+      // Curcumin cluster — follows pointer
+      const { x: px, y: py, active } = pointerRef.current
+      curRef.current.forEach(c => {
+        const tx = active ? px + c.ox : W / 2 + c.ox + Math.cos(frame * 0.01 + c.oy) * 20
+        const ty = active ? py + c.oy : H / 2 + c.oy + Math.sin(frame * 0.01 + c.ox) * 20
+        c.x += (tx - c.x) * 0.12
+        c.y += (ty - c.y) * 0.12
+        c.glow = 0.5 + Math.sin(frame * 0.04 + c.ox) * 0.3
+
+        const cg = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, c.r * 5)
+        cg.addColorStop(0, `rgba(255,215,0,${0.8 * c.glow})`)
+        cg.addColorStop(1, 'rgba(255,180,0,0)')
+        ctx.beginPath(); ctx.arc(c.x, c.y, c.r * 5, 0, Math.PI * 2)
+        ctx.fillStyle = cg; ctx.fill()
+        ctx.beginPath(); ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(255,215,0,0.95)`; ctx.fill()
+
+        // Collision check with bacteria
+        bacteriaRef.current.forEach(b => {
+          if (!b.alive) return
+          const dx = c.x - b.x, dy = c.y - b.y
+          if (Math.sqrt(dx*dx + dy*dy) < b.r + c.r * 1.5) {
+            b.alive = false
+            killed++
+            setBacteriaKilled(killed)
+          }
+        })
+      })
+
+      // Center instruction if pointer not active yet
+      if (!active && frame < 150) {
+        ctx.fillStyle = `rgba(255,215,0,${0.6 + Math.sin(frame * 0.08) * 0.3})`
+        ctx.font = 'bold 13px sans-serif'
+        ctx.textAlign = 'center'
+        ctx.fillText('Move your finger / cursor to guide the gold', W / 2, H - 20)
+        ctx.fillText('healing particles into the red bacteria! 🦠', W / 2, H - 5)
+        ctx.textAlign = 'left'
       }
 
       animRef.current = requestAnimationFrame(draw)
     }
     draw()
-    return () => { if (animRef.current) cancelAnimationFrame(animRef.current) }
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current)
+      canvas.removeEventListener('mousemove', handleMove)
+      canvas.removeEventListener('touchmove', handleMove)
+      canvas.removeEventListener('mouseleave', handleLeave)
+      canvas.removeEventListener('touchend', handleLeave)
+    }
   }, [phase])
+
 
   function handleContinueToHeal() {
     dispatch({ type: ACTIONS.SET_STAGE, payload: 3 })
@@ -372,41 +434,81 @@ export default function Stage2_Prepare() {
 
   // ═══ MICROSCOPE PHASE ═══
   if (phase === 'microscope') {
+    const allKilled = bacteriaKilled >= TOTAL_BACTERIA
     return (
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', minHeight: '100dvh', padding: '24px', gap: '16px',
+        justifyContent: 'center', minHeight: '100dvh', padding: '24px', gap: '12px',
       }}>
         <motion.h2 initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
           className="font-heading"
-          style={{ color: '#f5c842', fontSize: 'clamp(1.2rem, 4vw, 1.6rem)', textAlign: 'center' }}>
-          🔬 Microscopic World
+          style={{ color: '#f5c842', fontSize: 'clamp(1.1rem, 4vw, 1.5rem)', textAlign: 'center' }}>
+          🔬 Microscopic Attack!
         </motion.h2>
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-          style={{ color: 'var(--color-text-secondary)', textAlign: 'center', maxWidth: '500px', fontSize: '0.9rem', lineHeight: 1.5 }}>
-          {MICRO_TEXT[state.currentDay] || 'Watch the science happen at a molecular level!'}
-        </motion.p>
 
+        {/* Kill counter HUD */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+          style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '100%', maxWidth: 600 }}>
+          <div style={{ display: 'flex', align: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.1rem' }}>🦠</span>
+            <span style={{ color: '#EF5350', fontWeight: 700, fontSize: '0.9rem' }}>
+              {TOTAL_BACTERIA - bacteriaKilled} remaining
+            </span>
+          </div>
+          <div style={{ flex: 1, height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.1)' }}>
+            <motion.div
+              animate={{ width: `${(bacteriaKilled / TOTAL_BACTERIA) * 100}%` }}
+              style={{ height: '100%', borderRadius: '3px', background: 'linear-gradient(90deg, #FFD700, #00C853)' }}
+            />
+          </div>
+          <span style={{ color: '#FFD700', fontWeight: 700, fontSize: '0.9rem' }}>
+            {bacteriaKilled}/{TOTAL_BACTERIA} 💥
+          </span>
+        </motion.div>
+
+        {/* Canvas */}
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.5 }}
           style={{
             width: '100%', maxWidth: '600px', aspectRatio: '3/2',
             borderRadius: '16px', overflow: 'hidden',
-            border: `2px solid ${remedy.color}44`,
-            boxShadow: `0 0 40px ${remedy.color}22`,
+            border: `2px solid ${allKilled ? '#00C853' : remedy.color}66`,
+            boxShadow: `0 0 40px ${allKilled ? '#00C85333' : remedy.color + '22'}`,
+            position: 'relative',
           }}>
           <canvas ref={canvasRef} width={600} height={400}
-            style={{ width: '100%', height: '100%', display: 'block' }} />
+            style={{ width: '100%', height: '100%', display: 'block', cursor: 'crosshair' }} />
+          {/* All killed overlay */}
+          {allKilled && (
+            <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+              style={{
+                position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
+              }}>
+              <p style={{ fontSize: '3rem', marginBottom: '8px' }}>🎉</p>
+              <p className="font-heading" style={{ color: '#00C853', fontSize: '1.2rem' }}>All bacteria defeated!</p>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginTop: '4px' }}>The remedy worked! 🌟</p>
+            </motion.div>
+          )}
         </motion.div>
 
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.82rem', textAlign: 'center', maxWidth: 400 }}>
+          {allKilled
+            ? '✅ Every last germ has been defeated by your remedy!'
+            : 'Move your cursor or finger over the canvas — guide the golden healing particles into the red bacteria!'}
+        </p>
+
         <motion.button initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 2 }} className="btn-primary" onClick={handleContinueToHeal}
-          style={{ padding: '14px 36px', fontSize: '1.1rem', marginTop: '8px' }}>
-          Continue to Healing →
+          transition={{ delay: allKilled ? 0.3 : 3 }} className="btn-primary"
+          onClick={handleContinueToHeal}
+          style={{ padding: '14px 36px', fontSize: '1rem', marginTop: '4px' }}>
+          {allKilled ? '🏆 Give Remedy to Arjun!' : 'Skip to Healing →'}
         </motion.button>
       </div>
     )
   }
+
 
   // ═══ DONE PHASE ═══
   if (phase === 'done') {

@@ -10,6 +10,7 @@ import Stage2_Prepare from './stages/Stage2_Prepare'
 import Stage3_Heal from './stages/Stage3_Heal'
 import SoundManager from './components/SoundManager'
 import ProgressBar from './components/ProgressBar'
+import HealerJournal from './components/HealerJournal'
 
 const stageComponents = {
   1: Stage1_Diagnose,
@@ -32,6 +33,9 @@ function App() {
     <div className="bg-animated" style={{ minHeight: '100dvh', position: 'relative' }}>
       {/* Sound toggle */}
       <SoundManager />
+
+      {/* Healer's Journal */}
+      <HealerJournal currentDay={state.currentDay} />
 
       {/* Day indicator */}
       <div style={{
