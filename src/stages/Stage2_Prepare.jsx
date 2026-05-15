@@ -32,14 +32,17 @@ export default function Stage2_Prepare() {
   const [addedIngredients, setAddedIngredients] = useState([])
   const [wrongItem, setWrongItem] = useState(null)
   const [wrongMsg, setWrongMsg] = useState('')
-  const [phase, setPhase] = useState('select') // select → stir → heat → microscope → done
+  const [phase, setPhase] = useState('select') // select → crush? → stir → heat → microscope → done
   const [bowlItems, setBowlItems] = useState([])
   const [stirProgress, setStirProgress] = useState(0)
   const [temperature, setTemperature] = useState(25)
   const [isHeating, setIsHeating] = useState(false)
+  const [crushProgress, setCrushProgress] = useState(0)
   const canvasRef = useRef(null)
   const animRef = useRef(null)
   const heatInterval = useRef(null)
+  const isDay7 = state.currentDay >= 7
+  const needsCrush = state.currentDay >= 4
 
   const isAdded = useCallback((id) => addedIngredients.includes(id), [addedIngredients])
 
@@ -72,12 +75,19 @@ export default function Stage2_Prepare() {
     setWrongMsg('')
   }
 
-  // Watch for completion → stir
+  // Watch for completion → crush (Days 4-7) or stir (Days 1-3)
   useEffect(() => {
     if (isComplete && phase === 'select') {
-      setTimeout(() => setPhase('stir'), 1000)
+      setTimeout(() => setPhase(needsCrush ? 'crush' : 'stir'), 1000)
     }
-  }, [isComplete, phase])
+  }, [isComplete, phase, needsCrush])
+
+  // Crush complete → stir
+  useEffect(() => {
+    if (phase === 'crush' && crushProgress >= 100) {
+      setTimeout(() => setPhase('stir'), 600)
+    }
+  }, [phase, crushProgress])
 
   // Stir complete → heat
   useEffect(() => {
@@ -285,29 +295,124 @@ export default function Stage2_Prepare() {
 
   if (!remedy) return null
 
-  // Step indicator component
-  const stepNum = phase === 'select' ? 1 : phase === 'stir' ? 2 : phase === 'heat' ? 3 : 4
+  // Step indicator — adds Crush step for Days 4-7
+  const steps = needsCrush
+    ? [{ n: 1, label: 'Find' }, { n: 2, label: 'Crush' }, { n: 3, label: 'Stir' }, { n: 4, label: 'Heat' }]
+    : [{ n: 1, label: 'Find' }, { n: 2, label: 'Stir' }, { n: 3, label: 'Heat' }]
+  const stepNum = phase === 'select' ? 1 : phase === 'crush' ? 2 : phase === 'stir' ? (needsCrush ? 3 : 2) : phase === 'heat' ? (needsCrush ? 4 : 3) : 5
+
   const StepIndicator = () => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-      {[{ n: 1, label: 'Find' }, { n: 2, label: 'Stir' }, { n: 3, label: 'Heat' }].map((s, i) => (
-        <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+      {steps.map((s, i) => (
+        <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <div style={{
-            width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.75rem', fontWeight: 700,
+            width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '0.7rem', fontWeight: 700,
             background: stepNum > s.n ? '#00C853' : stepNum === s.n ? remedy.color : 'rgba(255,255,255,0.1)',
             color: stepNum >= s.n ? 'white' : 'rgba(255,255,255,0.4)',
             border: `2px solid ${stepNum > s.n ? '#00C853' : stepNum === s.n ? remedy.color : 'rgba(255,255,255,0.15)'}`,
           }}>
             {stepNum > s.n ? '✓' : s.n}
           </div>
-          <span style={{ fontSize: '0.75rem', color: stepNum >= s.n ? 'var(--color-text-primary)' : 'rgba(255,255,255,0.3)' }}>{s.label}</span>
-          {i < 2 && <span style={{ color: 'rgba(255,255,255,0.15)', margin: '0 4px' }}>—</span>}
+          <span style={{ fontSize: '0.7rem', color: stepNum >= s.n ? 'var(--color-text-primary)' : 'rgba(255,255,255,0.3)' }}>{s.label}</span>
+          {i < steps.length - 1 && <span style={{ color: 'rgba(255,255,255,0.12)', margin: '0 2px' }}>—</span>}
         </div>
       ))}
     </div>
   )
 
-  // ═══ STIR PHASE ═══
+  // ═══ CRUSH PHASE (Days 4-7) ═══
+  if (phase === 'crush') {
+    const crushIngredients = [
+      { emoji: '🧄', label: 'Garlic' }, { emoji: '🫚', label: 'Ginger' },
+      { emoji: '⚫', label: 'Pepper' },
+    ].slice(0, state.currentDay >= 6 ? 3 : state.currentDay >= 5 ? 2 : 1)
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', padding: '72px 16px 100px', gap: '16px' }}>
+        <h2 className="font-heading" style={{ color: remedy.color, fontSize: 'clamp(1.2rem, 4vw, 1.6rem)' }}>
+          🔨 Crush the Ingredients!
+        </h2>
+        <p className="game-text" style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+          Fresh ingredients release more healing compounds when crushed first!
+        </p>
+        <StepIndicator />
+
+        <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>
+          Tap the mortar to crush! 🪨
+        </p>
+
+        {/* Mortar & Pestle */}
+        <motion.div
+          onClick={() => setCrushProgress(p => Math.min(100, p + 8))}
+          whileTap={{ scale: 0.93, rotate: [-2, 2, -1, 0] }}
+          style={{
+            width: '180px', height: '180px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            position: 'relative', userSelect: 'none',
+          }}>
+          {/* Bowl shape */}
+          <div style={{
+            width: '160px', height: '110px', borderRadius: '0 0 80px 80px',
+            background: `linear-gradient(180deg, rgba(100,80,60,0.4), rgba(60,40,20,0.6))`,
+            border: `3px solid rgba(180,140,100,0.4)`,
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            overflow: 'hidden', position: 'relative',
+            boxShadow: 'inset 0 -10px 30px rgba(0,0,0,0.3)',
+          }}>
+            {/* Fill level based on crush progress */}
+            <div style={{
+              width: '100%', height: `${crushProgress * 0.7}%`,
+              background: `${remedy.color}44`,
+              transition: 'height 0.2s',
+            }} />
+            {/* Ingredient emojis */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', gap: '4px' }}>
+              {crushIngredients.map((ing, i) => (
+                <motion.span key={i}
+                  animate={{ rotate: crushProgress > 0 ? [-5, 5, -3, 0] : 0 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ fontSize: '1.5rem', filter: `blur(${crushProgress * 0.02}px)` }}>
+                  {ing.emoji}
+                </motion.span>
+              ))}
+            </div>
+          </div>
+          {/* Pestle handle */}
+          <motion.div
+            animate={{ rotate: crushProgress > 0 ? [-15, 10, -8, 0] : 0 }}
+            style={{
+              position: 'absolute', top: 0, right: 20,
+              width: '14px', height: '80px', borderRadius: '7px',
+              background: 'linear-gradient(180deg, #A1887F, #6D4C41)',
+              transformOrigin: 'bottom center',
+            }} />
+        </motion.div>
+
+        {/* Progress bar */}
+        <div style={{ width: '200px' }}>
+          <div style={{ width: '100%', height: '8px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)' }}>
+            <motion.div animate={{ width: `${crushProgress}%` }}
+              style={{ height: '100%', borderRadius: '4px', background: remedy.color, transition: 'width 0.15s' }} />
+          </div>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', textAlign: 'center', marginTop: '6px' }}>
+            {crushProgress < 100 ? `Crushed: ${Math.round(crushProgress)}%` : '✅ Perfectly crushed!'}
+          </p>
+        </div>
+
+        {/* Science tip */}
+        <div style={{
+          padding: '12px 16px', borderRadius: '12px', maxWidth: '340px',
+          background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.2)',
+        }}>
+          <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, textAlign: 'center' }}>
+            💡 <strong>Science tip:</strong> Crushing garlic activates Allicin — the healing molecule is only released when the cell walls break!
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   if (phase === 'stir') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', padding: '72px 16px 100px', gap: '16px' }}>

@@ -289,6 +289,9 @@ function getSymptomStatus(symptomId, day) {
 function DailyCheckup({ day, onContinue }) {
   const isDay7 = day >= 7
   const healedCount = SYMPTOM_POSITIONS.filter(s => getSymptomStatus(s.id, day) !== 'active').length
+  // Map day to health state for Arjun
+  const health = day >= 7 ? 'healthy' : day >= 4 ? 'recovering' : 'sick'
+  const ringColor = isDay7 ? '#00C853' : '#FFD700'
 
   return (
     <motion.div
@@ -297,27 +300,48 @@ function DailyCheckup({ day, onContinue }) {
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         width: '100%', maxWidth: 480, gap: '16px',
       }}>
-      {/* Arjun with health ring */}
-      <div style={{ position: 'relative' }}>
-        <motion.div
-          animate={{ scale: [1, 1.03, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          style={{
-            width: 100, height: 100, borderRadius: '50%',
-            background: `conic-gradient(${isDay7 ? '#00C853' : '#FFD700'} ${(healedCount / 4) * 360}deg, rgba(255,255,255,0.08) 0deg)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '4px',
-          }}>
-          <div style={{
-            width: '100%', height: '100%', borderRadius: '50%',
-            background: 'var(--color-bg-primary)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '2.5rem',
-          }}>
-            {isDay7 ? '🎉' : day <= 3 ? '🤒' : '😊'}
-          </div>
-        </motion.div>
+      {/* Arjun with healing progress ring */}
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* SVG ring behind Arjun */}
+        <svg width="180" height="180" style={{ position: 'absolute' }}>
+          {/* Background ring */}
+          <circle cx="90" cy="90" r="80" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+          {/* Progress ring */}
+          <motion.circle
+            cx="90" cy="90" r="80"
+            fill="none"
+            stroke={ringColor}
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 80}`}
+            initial={{ strokeDashoffset: 2 * Math.PI * 80 }}
+            animate={{ strokeDashoffset: 2 * Math.PI * 80 * (1 - healedCount / 4) }}
+            transition={{ duration: 1.2, ease: 'easeOut' }}
+            style={{ transform: 'rotate(-90deg)', transformOrigin: '90px 90px', filter: `drop-shadow(0 0 8px ${ringColor})` }}
+          />
+        </svg>
+        {/* Arjun character in centre */}
+        <div style={{ zIndex: 1 }}>
+          <PatientCharacter health={health} size={120} showLabel={false} />
+        </div>
+        {/* Day 7 crown overlay */}
+        {isDay7 && (
+          <motion.div
+            initial={{ scale: 0, y: -10 }} animate={{ scale: 1, y: 0 }}
+            transition={{ delay: 0.4, type: 'spring' }}
+            style={{
+              position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
+              fontSize: '1.6rem', zIndex: 2,
+            }}>
+            👑
+          </motion.div>
+        )}
       </div>
+      {/* Status label */}
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+        style={{ fontSize: '0.9rem', color: ringColor, fontWeight: 700, textAlign: 'center' }}>
+        {isDay7 ? '🎉 Arjun is completely healed!' : health === 'recovering' ? '🙂 Arjun is getting much better!' : '😷 Arjun still needs your help!'}
+      </motion.p>
 
       {/* Symptom tracker */}
       <div style={{ width: '100%' }}>
