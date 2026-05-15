@@ -630,6 +630,190 @@ export default function Stage2_Prepare() {
     )
   }
 
+  // ═══ DAY 7 MASTER KADHA FINALE ═══
+  if (phase === 'select' && isDay7) {
+    const MASTER_INGREDIENTS = [
+      { id: 'turmeric',   emoji: '🌿', name: 'Turmeric',    color: '#FFD700', day: 1, fact: 'Curcumin — the golden healer' },
+      { id: 'tulsi',      emoji: '🌱', name: 'Tulsi',       color: '#00C853', day: 2, fact: 'Eugenol — the viral shield' },
+      { id: 'ginger',     emoji: '🫚', name: 'Ginger',      color: '#FF8F00', day: 3, fact: 'Gingerol — the bacteria killer' },
+      { id: 'eucalyptus', emoji: '💨', name: 'Eucalyptus',  color: '#40C4FF', day: 4, fact: 'Cineole — opens the airways' },
+      { id: 'garlic',     emoji: '🧄', name: 'Garlic',      color: '#FFFDE7', day: 5, fact: 'Allicin — nature\'s antibiotic' },
+      { id: 'pepper',     emoji: '⚫', name: 'Black Pepper', color: '#78909C', day: 6, fact: 'Piperine — the power amplifier' },
+    ]
+    const allMasterAdded = addedIngredients.length >= MASTER_INGREDIENTS.length
+    const potFill = (addedIngredients.length / MASTER_INGREDIENTS.length) * 100
+
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        minHeight: '100dvh', padding: '64px 16px 100px', gap: '12px',
+      }}>
+        {/* Title */}
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center' }}>
+          <p style={{ fontSize: '2rem', marginBottom: '4px' }}>👑</p>
+          <h2 className="font-heading" style={{ color: '#FFD700', fontSize: 'clamp(1.3rem, 5vw, 1.8rem)' }}>
+            Master Kadha — Day 7 Finale!
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginTop: '4px' }}>
+            Add ALL 6 remedies you've learned into the pot!
+          </p>
+        </motion.div>
+
+        {/* Big pot with animated boiling */}
+        <div style={{ position: 'relative', width: '200px', height: '200px', flexShrink: 0 }}>
+          {/* Bubbles when boiling */}
+          {addedIngredients.length > 0 && [0,1,2,3].map(i => (
+            <motion.div key={i}
+              animate={{ y: [-0, -40 - i * 15], opacity: [0.6, 0], scale: [0.4, 1.2] }}
+              transition={{ duration: 1.2 + i * 0.3, repeat: Infinity, delay: i * 0.3 }}
+              style={{
+                position: 'absolute',
+                left: `${30 + i * 35}px`,
+                bottom: '80px',
+                width: 12 + i * 4, height: 12 + i * 4,
+                borderRadius: '50%',
+                background: `rgba(255,215,0,0.4)`,
+              }} />
+          ))}
+
+          {/* Pot SVG */}
+          <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%' }}>
+            {/* Pot handles */}
+            <rect x="15" y="90" width="20" height="14" rx="7" fill="#546E7A" />
+            <rect x="165" y="90" width="20" height="14" rx="7" fill="#546E7A" />
+            {/* Pot body */}
+            <path d="M 35 95 Q 35 185 100 185 Q 165 185 165 95 Z" fill="rgba(40,60,80,0.8)" stroke="#78909C" strokeWidth="3" />
+            {/* Liquid fill — color blends all added ingredients */}
+            {addedIngredients.length > 0 && (
+              <motion.path
+                d={`M 40 ${170 - potFill * 0.7} Q 40 178 100 178 Q 160 178 160 ${170 - potFill * 0.7} Z`}
+                fill={`${remedy.color}66`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              />
+            )}
+            {/* Rim */}
+            <ellipse cx="100" cy="95" rx="65" ry="14" fill="rgba(50,70,90,0.9)" stroke="#90A4AE" strokeWidth="2" />
+            {/* Steam when full */}
+            {allMasterAdded && [0,1].map(i => (
+              <motion.ellipse key={i} cx={80 + i * 40} cy="75"
+                rx="8" ry="18"
+                fill="rgba(255,255,255,0.06)"
+                animate={{ cy: [75, 45, 75], opacity: [0.4, 0, 0.4] }}
+                transition={{ duration: 2, repeat: Infinity, delay: i * 0.7 }} />
+            ))}
+            {/* Ingredient emojis in pot */}
+            {addedIngredients.map((id, i) => {
+              const ing = MASTER_INGREDIENTS.find(m => m.id === id)
+              return (
+                <motion.text key={id}
+                  initial={{ y: -30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                  x={55 + (i % 3) * 35} y={135 + Math.floor(i / 3) * 30}
+                  fontSize="22" textAnchor="middle">
+                  {ing?.emoji}
+                </motion.text>
+              )
+            })}
+          </svg>
+        </div>
+
+        {/* Ingredient grid — 6 slots */}
+        <div style={{ width: '100%', maxWidth: 420 }}>
+          <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)', textAlign: 'center', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            Tap each ingredient to add it to the pot
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            {MASTER_INGREDIENTS.map((ing, i) => {
+              const added = addedIngredients.includes(ing.id)
+              return (
+                <motion.button key={ing.id}
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + i * 0.1 }}
+                  onClick={() => !added && setAddedIngredients(prev => [...prev, ing.id])}
+                  whileHover={!added ? { scale: 1.06, y: -3 } : {}}
+                  whileTap={!added ? { scale: 0.94 } : {}}
+                  disabled={added}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
+                    padding: '12px 8px', borderRadius: '14px', cursor: added ? 'default' : 'pointer',
+                    background: added ? `${ing.color}18` : 'rgba(255,255,255,0.05)',
+                    border: `2px solid ${added ? ing.color + '66' : 'rgba(255,255,255,0.1)'}`,
+                    transition: 'all 0.25s',
+                    position: 'relative',
+                  }}>
+                  {/* Day badge */}
+                  <span style={{
+                    position: 'absolute', top: 4, right: 6,
+                    fontSize: '0.55rem', color: 'rgba(255,255,255,0.3)', fontWeight: 700,
+                  }}>Day {ing.day}</span>
+                  <span style={{ fontSize: '1.6rem', filter: added ? 'none' : 'grayscale(0.3)' }}>{ing.emoji}</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: added ? ing.color : 'rgba(255,255,255,0.6)', textAlign: 'center' }}>
+                    {ing.name}
+                  </span>
+                  {added && (
+                    <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                      style={{ fontSize: '0.65rem', color: '#00C853', fontWeight: 700 }}>✓ Added</motion.span>
+                  )}
+                </motion.button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div style={{ width: '100%', maxWidth: 420 }}>
+          <div style={{ width: '100%', height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.08)' }}>
+            <motion.div animate={{ width: `${potFill}%` }}
+              style={{ height: '100%', borderRadius: '3px', background: 'linear-gradient(90deg, #FFD700, #FF8F00, #00C853)' }} />
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem', textAlign: 'center', marginTop: '4px' }}>
+            {addedIngredients.length}/6 ingredients added
+          </p>
+        </div>
+
+        {/* Success overlay — all 6 added */}
+        <AnimatePresence>
+          {allMasterAdded && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              style={{
+                position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+                flexDirection: 'column', gap: '16px',
+              }}>
+              <motion.div initial={{ scale: 0, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', damping: 10 }}
+                style={{
+                  textAlign: 'center', padding: '36px 28px', borderRadius: '28px',
+                  background: 'linear-gradient(135deg, #0f1a2e, #1a0a2e)',
+                  border: '2px solid rgba(255,215,0,0.4)',
+                  boxShadow: '0 0 80px rgba(255,215,0,0.2)',
+                  maxWidth: '340px', width: '90%',
+                }}>
+                <p style={{ fontSize: '2.8rem', marginBottom: '8px' }}>🏆✨👑</p>
+                <h2 className="font-heading" style={{ color: '#FFD700', fontSize: '1.4rem', marginBottom: '8px' }}>
+                  Master Kadha Ready!
+                </h2>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', lineHeight: 1.6, marginBottom: '20px' }}>
+                  You've combined all 6 healing compounds! Ancient healers called this the "Liquid Gold" of Ayurveda.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                  {MASTER_INGREDIENTS.map(ing => (
+                    <span key={ing.id} style={{ fontSize: '1.4rem' }}>{ing.emoji}</span>
+                  ))}
+                </div>
+                <button className="btn-primary" onClick={() => setPhase(needsCrush ? 'crush' : 'stir')}
+                  style={{ width: '100%', fontSize: '1rem' }}>
+                  Start the Final Preparation! 🔥
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    )
+  }
+
   // ═══ SELECT PHASE — Bowl (left) + Shelf (right) ═══
   return (
     <div style={{
