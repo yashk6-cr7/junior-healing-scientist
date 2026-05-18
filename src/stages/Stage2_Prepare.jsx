@@ -20,6 +20,260 @@ const MICRO_TEXT = {
   7: 'All six healing compounds converge, forming the ultimate Kadha healing stream! 👑',
 }
 
+// ─── GrindBowl — drag-to-grind mechanic ──────────────────────────────────────
+// User drags the pestle LEFT/RIGHT across the mortar to grind ingredients.
+// Total horizontal distance dragged (500 px total) = 100% crushed.
+// Pestle follows pointer X position. Dust bursts out on active grinding.
+function GrindBowl({ remedyColor, crushProgress, onProgressChange, StepIndicator, ingredients, currentDay }) {
+  const mortarRef = useRef(null)
+  const lastXRef = useRef(null)
+  const totalDistRef = useRef(crushProgress * 5) // resume: 500px = 100%
+  const isActiveRef = useRef(false)
+  const [pestleX, setPestleX] = useState(50) // 0-100% across mortar
+  const [particles, setParticles] = useState([])
+
+  const TOTAL_PX = 500 // total drag distance for 100%
+
+  function getRelX(clientX) {
+    const rect = mortarRef.current.getBoundingClientRect()
+    return Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100))
+  }
+
+  function spawnParticles(x) {
+    const id = Date.now() + Math.random()
+    setParticles(prev => [...prev.slice(-10), { id, x, color: remedyColor }])
+    setTimeout(() => setParticles(prev => prev.filter(p => p.id !== id)), 800)
+  }
+
+  function handleStart(clientX) {
+    isActiveRef.current = true
+    lastXRef.current = clientX
+    setPestleX(getRelX(clientX))
+  }
+
+  function handleMove(clientX) {
+    if (!isActiveRef.current || lastXRef.current === null) return
+    const delta = Math.abs(clientX - lastXRef.current)
+    lastXRef.current = clientX
+    totalDistRef.current += delta
+    const pct = Math.min(100, (totalDistRef.current / TOTAL_PX) * 100)
+    onProgressChange(pct)
+    const rx = getRelX(clientX)
+    setPestleX(rx)
+    if (delta > 3) spawnParticles(rx)
+  }
+
+  function handleEnd() {
+    isActiveRef.current = false
+    lastXRef.current = null
+  }
+
+  function onPointerDown(e) { e.currentTarget.setPointerCapture(e.pointerId); handleStart(e.clientX) }
+  function onPointerMove(e) { handleMove(e.clientX) }
+  function onPointerUp() { handleEnd() }
+  function onTouchStart(e) { handleStart(e.touches[0].clientX) }
+  function onTouchMove(e) { e.preventDefault(); handleMove(e.touches[0].clientX) }
+  function onTouchEnd() { handleEnd() }
+
+  const isDone = crushProgress >= 100
+  const crushScale = 1 - (crushProgress / 100) * 0.35 // ingredients shrink as crushed
+  const crushBlur = (crushProgress / 100) * 3
+
+  // Science tip based on day
+  const tips = {
+    4: 'Crushing garlic releases Allicin — it only activates when cell walls break!',
+    5: 'Ginger releases Gingerols when crushed — 10× more potent than whole ginger!',
+    6: 'Black pepper releases Piperine when ground — makes turmeric 2000% more effective!',
+    7: 'Crushing all spices together creates a synergistic blend — each amplifies the others!',
+  }
+  const tip = tips[currentDay] || tips[4]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', padding: '64px 16px 100px', gap: '14px' }}>
+      <h2 className="font-heading" style={{ color: remedyColor, fontSize: 'clamp(1.2rem, 4vw, 1.6rem)' }}>
+        🔨 Crush the Ingredients!
+      </h2>
+      <p className="game-text" style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+        Fresh ingredients release more healing compounds when crushed first!
+      </p>
+      <StepIndicator />
+
+      <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>
+        {isDone ? '✅ Perfectly crushed!' : 'Drag the pestle left & right across the mortar! 🪨'}
+      </p>
+
+      {/* Mortar & Pestle container */}
+      <div style={{ position: 'relative', width: '280px', height: '200px', userSelect: 'none' }}>
+
+        {/* Dust/spice particles flying out */}
+        {particles.map(p => (
+          <motion.div
+            key={p.id}
+            initial={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+            animate={{ opacity: 0, y: -40, x: (Math.random() - 0.5) * 60, scale: 0 }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+            style={{
+              position: 'absolute',
+              left: `${p.x}%`,
+              top: '30%',
+              width: '8px', height: '8px',
+              borderRadius: '50%',
+              background: p.color,
+              pointerEvents: 'none',
+              zIndex: 10,
+            }}
+          />
+        ))}
+
+        {/* Pestle (draggable) — sits above mortar */}
+        <motion.div
+          style={{
+            position: 'absolute',
+            left: `${pestleX}%`,
+            top: '0px',
+            transform: 'translateX(-50%)',
+            zIndex: 5,
+            cursor: isActiveRef.current ? 'grabbing' : 'grab',
+            touchAction: 'none',
+          }}
+          animate={{
+            rotate: isActiveRef.current ? [-8, 8] : 0,
+            y: isActiveRef.current ? [0, 4, 0] : 0,
+          }}
+          transition={{ duration: 0.15, repeat: isActiveRef.current ? Infinity : 0 }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerLeave={onPointerUp}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          {/* Pestle head */}
+          <div style={{
+            width: '22px', height: '70px',
+            background: 'linear-gradient(180deg, #BCAAA4, #8D6E63)',
+            borderRadius: '4px 4px 10px 10px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            margin: '0 auto',
+          }} />
+          {/* Pestle tip */}
+          <div style={{
+            width: '28px', height: '16px',
+            background: 'linear-gradient(180deg, #8D6E63, #5D4037)',
+            borderRadius: '4px 4px 14px 14px',
+            boxShadow: `0 2px 8px ${remedyColor}44`,
+            margin: '-2px auto 0',
+          }} />
+        </motion.div>
+
+        {/* Mortar bowl */}
+        <div
+          ref={mortarRef}
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0, right: 0,
+            height: '120px',
+            cursor: 'grab',
+            touchAction: 'none',
+          }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerLeave={onPointerUp}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          {/* Mortar bowl shape */}
+          <div style={{
+            width: '100%', height: '100%',
+            borderRadius: '0 0 140px 140px',
+            background: 'linear-gradient(180deg, rgba(120,90,60,0.5), rgba(60,35,15,0.85))',
+            border: '3px solid rgba(200,160,110,0.35)',
+            boxShadow: 'inset 0 -12px 40px rgba(0,0,0,0.5), 0 4px 20px rgba(0,0,0,0.3)',
+            overflow: 'hidden',
+            position: 'relative',
+          }}>
+            {/* Ground paste filling up */}
+            <motion.div
+              animate={{ height: `${crushProgress * 0.65}%` }}
+              style={{
+                position: 'absolute', bottom: 0, left: 0, right: 0,
+                background: `linear-gradient(0deg, ${remedyColor}66, ${remedyColor}33)`,
+                transition: 'background 0.5s',
+              }}
+            />
+
+            {/* Ingredient emojis — shrink & blur as crushed */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', gap: '6px', pointerEvents: 'none' }}>
+              {ingredients.map((ing, i) => (
+                <motion.span key={i}
+                  animate={{
+                    scale: crushScale,
+                    rotate: isActiveRef.current ? [-8, 8, -5, 5, 0] : 0,
+                  }}
+                  transition={{ duration: 0.2 }}
+                  style={{
+                    fontSize: '1.8rem',
+                    display: 'block',
+                    filter: `blur(${crushBlur}px)`,
+                    transformOrigin: 'center',
+                  }}>
+                  {ing.emoji}
+                </motion.span>
+              ))}
+            </div>
+
+            {/* Grinding streak lines */}
+            {isActiveRef.current && (
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: [0, 0.5, 0] }}
+                transition={{ duration: 0.3, repeat: Infinity }}
+                style={{
+                  position: 'absolute', top: '30%',
+                  left: `${pestleX - 10}%`, width: '20%', height: '3px',
+                  background: `linear-gradient(90deg, transparent, ${remedyColor}88, transparent)`,
+                  borderRadius: '2px',
+                }}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Drag distance hint */}
+      <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.75rem' }}>
+        {Math.round(Math.min(totalDistRef.current, TOTAL_PX) / 5)}px / 100px dragged
+      </p>
+
+      {/* Progress bar */}
+      <div style={{ width: '240px' }}>
+        <div style={{ width: '100%', height: '8px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)' }}>
+          <motion.div
+            animate={{ width: `${crushProgress}%` }}
+            style={{ height: '100%', borderRadius: '4px', background: remedyColor }}
+          />
+        </div>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', textAlign: 'center', marginTop: '6px' }}>
+          {isDone ? '✅ Perfectly crushed!' : `Crushed: ${Math.round(crushProgress)}%`}
+        </p>
+      </div>
+
+      {/* Science tip */}
+      <div style={{
+        padding: '12px 16px', borderRadius: '12px', maxWidth: '320px',
+        background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.2)',
+      }}>
+        <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, textAlign: 'center' }}>
+          💡 <strong>Science tip:</strong> {tip}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ─── StirBowl — rotation-tracking stir mechanic ──────────────────────────────
 // Tracks the angle of cursor/finger around the bowl center.
 // Every degree rotated (clockwise or CCW) accumulates toward 100%.
@@ -477,87 +731,14 @@ export default function Stage2_Prepare() {
     ].slice(0, state.currentDay >= 6 ? 3 : state.currentDay >= 5 ? 2 : 1)
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', padding: '72px 16px 100px', gap: '16px' }}>
-        <h2 className="font-heading" style={{ color: remedy.color, fontSize: 'clamp(1.2rem, 4vw, 1.6rem)' }}>
-          🔨 Crush the Ingredients!
-        </h2>
-        <p className="game-text" style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
-          Fresh ingredients release more healing compounds when crushed first!
-        </p>
-        <StepIndicator />
-
-        <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>
-          Tap the mortar to crush! 🪨
-        </p>
-
-        {/* Mortar & Pestle */}
-        <motion.div
-          onClick={() => setCrushProgress(p => Math.min(100, p + 8))}
-          whileTap={{ scale: 0.93, rotate: [-2, 2, -1, 0] }}
-          style={{
-            width: '180px', height: '180px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            position: 'relative', userSelect: 'none',
-          }}>
-          {/* Bowl shape */}
-          <div style={{
-            width: '160px', height: '110px', borderRadius: '0 0 80px 80px',
-            background: `linear-gradient(180deg, rgba(100,80,60,0.4), rgba(60,40,20,0.6))`,
-            border: `3px solid rgba(180,140,100,0.4)`,
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            overflow: 'hidden', position: 'relative',
-            boxShadow: 'inset 0 -10px 30px rgba(0,0,0,0.3)',
-          }}>
-            {/* Fill level based on crush progress */}
-            <div style={{
-              width: '100%', height: `${crushProgress * 0.7}%`,
-              background: `${remedy.color}44`,
-              transition: 'height 0.2s',
-            }} />
-            {/* Ingredient emojis */}
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', gap: '4px' }}>
-              {crushIngredients.map((ing, i) => (
-                <motion.span key={i}
-                  animate={{ rotate: crushProgress > 0 ? [-5, 5, -3, 0] : 0 }}
-                  transition={{ duration: 0.3 }}
-                  style={{ fontSize: '1.5rem', filter: `blur(${crushProgress * 0.02}px)` }}>
-                  {ing.emoji}
-                </motion.span>
-              ))}
-            </div>
-          </div>
-          {/* Pestle handle */}
-          <motion.div
-            animate={{ rotate: crushProgress > 0 ? [-15, 10, -8, 0] : 0 }}
-            style={{
-              position: 'absolute', top: 0, right: 20,
-              width: '14px', height: '80px', borderRadius: '7px',
-              background: 'linear-gradient(180deg, #A1887F, #6D4C41)',
-              transformOrigin: 'bottom center',
-            }} />
-        </motion.div>
-
-        {/* Progress bar */}
-        <div style={{ width: '200px' }}>
-          <div style={{ width: '100%', height: '8px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)' }}>
-            <motion.div animate={{ width: `${crushProgress}%` }}
-              style={{ height: '100%', borderRadius: '4px', background: remedy.color, transition: 'width 0.15s' }} />
-          </div>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', textAlign: 'center', marginTop: '6px' }}>
-            {crushProgress < 100 ? `Crushed: ${Math.round(crushProgress)}%` : '✅ Perfectly crushed!'}
-          </p>
-        </div>
-
-        {/* Science tip */}
-        <div style={{
-          padding: '12px 16px', borderRadius: '12px', maxWidth: '340px',
-          background: 'rgba(255,215,0,0.06)', border: '1px solid rgba(255,215,0,0.2)',
-        }}>
-          <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, textAlign: 'center' }}>
-            💡 <strong>Science tip:</strong> Crushing garlic activates Allicin — the healing molecule is only released when the cell walls break!
-          </p>
-        </div>
-      </div>
+      <GrindBowl
+        remedyColor={remedy.color}
+        crushProgress={crushProgress}
+        onProgressChange={setCrushProgress}
+        StepIndicator={StepIndicator}
+        ingredients={crushIngredients}
+        currentDay={state.currentDay}
+      />
     )
   }
 
