@@ -20,6 +20,154 @@ const MICRO_TEXT = {
   7: 'All six healing compounds converge, forming the ultimate Kadha healing stream! 👑',
 }
 
+// ─── StirBowl — rotation-tracking stir mechanic ──────────────────────────────
+// Tracks the angle of cursor/finger around the bowl center.
+// Every degree rotated (clockwise or CCW) accumulates toward 100%.
+// 3 full circles (1080°) = 100% mixed.
+function StirBowl({ remedyColor, stirProgress, onProgressChange, StepIndicator, totalDegNeeded }) {
+  const bowlRef = useRef(null)
+  const lastAngleRef = useRef(null)    // last recorded angle in degrees
+  const totalRotRef = useRef(stirProgress * totalDegNeeded / 100) // resume from saved
+  const isActiveRef = useRef(false)    // pointer is down / finger is touching
+
+  function getAngle(clientX, clientY) {
+    const rect = bowlRef.current.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const dx = clientX - cx
+    const dy = clientY - cy
+    return Math.atan2(dy, dx) * (180 / Math.PI) // -180 to 180
+  }
+
+  function handleStart(clientX, clientY) {
+    isActiveRef.current = true
+    lastAngleRef.current = getAngle(clientX, clientY)
+  }
+
+  function handleMove(clientX, clientY) {
+    if (!isActiveRef.current || lastAngleRef.current === null) return
+    const newAngle = getAngle(clientX, clientY)
+    let delta = newAngle - lastAngleRef.current
+    // Wrap around -180/180 boundary
+    if (delta > 180) delta -= 360
+    if (delta < -180) delta += 360
+    // Count absolute rotation (either direction)
+    totalRotRef.current += Math.abs(delta)
+    lastAngleRef.current = newAngle
+    const pct = Math.min(100, (totalRotRef.current / totalDegNeeded) * 100)
+    onProgressChange(pct)
+  }
+
+  function handleEnd() {
+    isActiveRef.current = false
+    lastAngleRef.current = null
+  }
+
+  // Pointer events (mouse + stylus)
+  function onPointerDown(e) { e.currentTarget.setPointerCapture(e.pointerId); handleStart(e.clientX, e.clientY) }
+  function onPointerMove(e) { handleMove(e.clientX, e.clientY) }
+  function onPointerUp() { handleEnd() }
+
+  // Touch events (mobile fallback)
+  function onTouchStart(e) { const t = e.touches[0]; handleStart(t.clientX, t.clientY) }
+  function onTouchMove(e) { e.preventDefault(); const t = e.touches[0]; handleMove(t.clientX, t.clientY) }
+  function onTouchEnd() { handleEnd() }
+
+  const isDone = stirProgress >= 100
+  const rotationDeg = (totalRotRef.current / totalDegNeeded) * 360 * 3
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', padding: '72px 16px 100px', gap: '16px' }}>
+      <h2 className="font-heading" style={{ color: remedyColor, fontSize: 'clamp(1.2rem, 4vw, 1.6rem)' }}>
+        🧪 Prepare the Remedy
+      </h2>
+      <p className="game-text" style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+        Find the right ingredients, mix them, and heat to the perfect temperature!
+      </p>
+      <StepIndicator />
+      <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>
+        {isDone ? '✅ Perfectly mixed!' : 'Move your finger in circles inside the bowl! 🌀'}
+      </p>
+
+      {/* Bowl */}
+      <div
+        ref={bowlRef}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{
+          width: '220px', height: '220px', borderRadius: '50%', cursor: 'crosshair',
+          background: `radial-gradient(circle at 40% 40%, ${remedyColor}44, ${remedyColor}22)`,
+          border: `3px solid ${remedyColor}${isDone ? 'ff' : '66'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: `0 0 ${isDone ? 60 : 30}px ${remedyColor}${isDone ? '55' : '22'}`,
+          position: 'relative',
+          touchAction: 'none',
+          userSelect: 'none',
+          transition: 'box-shadow 0.3s, border-color 0.3s',
+        }}
+      >
+        {/* Swirl trail rings */}
+        {stirProgress > 10 && (
+          <div style={{
+            position: 'absolute', inset: 12, borderRadius: '50%',
+            border: `2px dashed ${remedyColor}33`,
+            animation: 'spin 4s linear infinite',
+          }} />
+        )}
+        {stirProgress > 40 && (
+          <div style={{
+            position: 'absolute', inset: 30, borderRadius: '50%',
+            border: `2px dashed ${remedyColor}44`,
+            animation: 'spin 2.5s linear infinite reverse',
+          }} />
+        )}
+        {/* Spiral emoji rotating with actual rotation amount */}
+        <motion.span
+          animate={{ rotate: rotationDeg }}
+          transition={{ type: 'tween', ease: 'linear', duration: 0 }}
+          style={{ fontSize: '3.5rem', display: 'block', pointerEvents: 'none', userSelect: 'none' }}>
+          🌀
+        </motion.span>
+        {/* Centre ripple when done */}
+        {isDone && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0.8 }} animate={{ scale: 3, opacity: 0 }}
+            transition={{ duration: 0.8 }}
+            style={{
+              position: 'absolute', width: 60, height: 60, borderRadius: '50%',
+              background: remedyColor, pointerEvents: 'none',
+            }} />
+        )}
+      </div>
+
+      {/* Circles counter */}
+      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.78rem' }}>
+        {Math.min(3, Math.floor(totalRotRef.current / 360))} / 3 circles completed
+      </p>
+
+      {/* Progress bar */}
+      <div style={{ width: '220px' }}>
+        <div style={{ width: '100%', height: '8px', borderRadius: '4px', background: 'rgba(255,255,255,0.1)' }}>
+          <motion.div
+            animate={{ width: `${stirProgress}%` }}
+            style={{ height: '100%', borderRadius: '4px', background: remedyColor }}
+          />
+        </div>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', textAlign: 'center', marginTop: '6px' }}>
+          Mix: {Math.round(stirProgress)}%
+        </p>
+      </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>
+  )
+}
+
 export default function Stage2_Prepare() {
   const { state, dispatch } = useGameState()
   const remedy = getRemedyByDay(state.currentDay)
@@ -414,53 +562,16 @@ export default function Stage2_Prepare() {
   }
 
   if (phase === 'stir') {
+    const TOTAL_DEG_NEEDED = 1080 // 3 full circles = 100%
+
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', padding: '72px 16px 100px', gap: '16px' }}>
-        <h2 className="font-heading" style={{ color: remedy.color, fontSize: 'clamp(1.2rem, 4vw, 1.6rem)' }}>
-          🧪 Prepare the Remedy
-        </h2>
-        <p className="game-text" style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
-          Find the right ingredients, mix them, and heat to the perfect temperature!
-        </p>
-        <StepIndicator />
-        <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>Draw circles in the bowl to mix! 🌀</p>
-
-        {/* Golden bowl with spiral */}
-        <motion.div
-          onPointerDown={() => setStirProgress(p => Math.min(100, p + 5))}
-          onClick={() => setStirProgress(p => Math.min(100, p + 5))}
-          whileTap={{ scale: 0.95 }}
-          style={{
-            width: '200px', height: '200px', borderRadius: '50%', cursor: 'pointer',
-            background: `radial-gradient(circle at 40% 40%, ${remedy.color}44, ${remedy.color}22)`,
-            border: `3px solid ${remedy.color}66`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: `0 0 40px ${remedy.color}22`,
-            position: 'relative',
-          }}>
-          <motion.span
-            animate={{ rotate: stirProgress * 7.2 }}
-            style={{ fontSize: '3rem' }}>
-            🌀
-          </motion.span>
-        </motion.div>
-
-        {/* Progress bar */}
-        <div style={{ width: '200px' }}>
-          <div style={{
-            width: '100%', height: '8px', borderRadius: '4px',
-            background: 'rgba(255,255,255,0.1)',
-          }}>
-            <div style={{
-              width: `${stirProgress}%`, height: '100%', borderRadius: '4px',
-              background: remedy.color, transition: 'width 0.15s',
-            }} />
-          </div>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', textAlign: 'center', marginTop: '6px' }}>
-            Mix: {Math.round(stirProgress)}%
-          </p>
-        </div>
-      </div>
+      <StirBowl
+        remedyColor={remedy.color}
+        stirProgress={stirProgress}
+        onProgressChange={setStirProgress}
+        StepIndicator={StepIndicator}
+        totalDegNeeded={TOTAL_DEG_NEEDED}
+      />
     )
   }
 
