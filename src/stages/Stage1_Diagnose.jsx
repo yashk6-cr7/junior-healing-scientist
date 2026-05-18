@@ -116,11 +116,9 @@ function SymptomIcon({ symptom, isInvestigated, onTap, orbitRadius, angle }) {
   )
 }
 
-// ─── Mystery Remedy Card — full redesign ─────────────────────────────────────
+// ─── Mystery Remedy Card — inquiry-based, no giveaways ───────────────────────
 function MysteryRemedyCard({ day, onContinue }) {
   const hint = MYSTERY_HINTS[day]
-  const [revealed, setRevealed] = useState(false)
-  const [showFact, setShowFact] = useState(false)
   if (!hint) return null
 
   return (
@@ -130,7 +128,7 @@ function MysteryRemedyCard({ day, onContinue }) {
       transition={{ type: 'spring', stiffness: 260, damping: 24 }}
       style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 520, gap: '14px' }}
     >
-      {/* ── Header: pulsing icon + mood text ── */}
+      {/* ── Header: pulsing mystery icon ── */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
         <motion.div
           animate={{ rotate: [0, -8, 8, -4, 4, 0], scale: [1, 1.08, 1] }}
@@ -143,14 +141,14 @@ function MysteryRemedyCard({ day, onContinue }) {
             fontSize: '2.6rem',
             boxShadow: `0 0 40px ${hint.iconBg}44, 0 0 80px ${hint.iconBg}22`,
           }}>
-          {revealed ? hint.icon : '🔍'}
+          🔍
         </motion.div>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem', fontStyle: 'italic' }}>
           Feeling {hint.mood}
         </p>
       </div>
 
-      {/* ── Keyword pills ── */}
+      {/* ── Keyword mood pills (clue without answer) ── */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
         {hint.tags.map((tag, i) => (
           <motion.div key={i}
@@ -174,85 +172,36 @@ function MysteryRemedyCard({ day, onContinue }) {
           width: '100%', padding: '18px 22px', borderRadius: '16px',
           background: 'rgba(255,215,0,0.06)',
           border: '1px solid rgba(255,215,0,0.25)',
-          position: 'relative',
         }}>
         <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,215,0,0.6)', marginBottom: '8px', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-          🔮 The Riddle
+          🔮 Today's Riddle — Can you guess the remedy?
         </p>
         <p style={{ color: 'var(--color-text-primary)', fontSize: '0.95rem', lineHeight: 1.7, fontStyle: 'italic' }}>
           "{hint.riddle}"
         </p>
       </motion.div>
 
-      {/* ── Emoji clue cards ── */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
-        style={{ width: '100%' }}>
-        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginBottom: '10px', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          🧩 Ingredient Clues
+      {/* ── Science fact — always visible, reinforces after riddle ── */}
+      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.9 }}
+        style={{
+          width: '100%', padding: '16px 18px', borderRadius: '14px',
+          background: 'rgba(0,200,83,0.08)', border: '1px solid rgba(0,200,83,0.3)',
+        }}>
+        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#00C853', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          🔬 Science Fact!
         </p>
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          {hint.clues.map((clue, i) => (
-            <motion.div key={i}
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.9 + i * 0.15, type: 'spring' }}
-              style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-                padding: '14px 12px', borderRadius: '14px', minWidth: '72px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}>
-              <span style={{ fontSize: '1.8rem' }}>{clue.emoji}</span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-text-primary)', textAlign: 'center' }}>{clue.label}</span>
-              <span style={{ fontSize: '0.65rem', color: 'var(--color-text-secondary)', textAlign: 'center', lineHeight: 1.3 }}>{clue.hint}</span>
-            </motion.div>
-          ))}
-        </div>
+        <p style={{ color: 'var(--color-text-primary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+          {hint.scienceFact}
+        </p>
       </motion.div>
 
-      {/* ── Science fact (shown after reveal) ── */}
-      {showFact && (
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-          style={{
-            width: '100%', padding: '16px 18px', borderRadius: '14px',
-            background: 'rgba(0,200,83,0.08)', border: '1px solid rgba(0,200,83,0.3)',
-          }}>
-          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#00C853', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            🔬 Science Fact!
-          </p>
-          <p style={{ color: 'var(--color-text-primary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
-            {hint.scienceFact}
-          </p>
-        </motion.div>
-      )}
-
-      {/* ── Answer reveal + continue ── */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.4 }}
-        style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: 360 }}>
-        {!revealed ? (
-          <button
-            onClick={() => { setRevealed(true); setShowFact(true) }}
-            style={{
-              width: '100%', padding: '13px', borderRadius: '50px',
-              background: `${hint.iconBg}22`, border: `2px solid ${hint.iconBg}66`,
-              color: hint.iconBg, fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer',
-            }}>
-            🔓 Reveal the Answer!
-          </button>
-        ) : (
-          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-            style={{
-              padding: '12px 18px', borderRadius: '12px', textAlign: 'center',
-              background: `${hint.iconBg}22`, border: `1px solid ${hint.iconBg}55`,
-            }}>
-            <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>Today's Remedy is...</p>
-            <p style={{ fontSize: '1.1rem', fontWeight: 800, color: hint.iconBg }}>
-              {hint.answerEmoji} {hint.answer}
-            </p>
-          </motion.div>
-        )}
+      {/* ── Continue — no answer reveal, child must discover in the lab ── */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
+        style={{ width: '100%', maxWidth: 360 }}>
         <button className="btn-primary" onClick={onContinue}
           style={{ width: '100%', fontSize: '1rem' }}>
-          Let's Make It! →
+          Go to the Lab &amp; Find Out! →
         </button>
       </motion.div>
     </motion.div>
@@ -448,19 +397,19 @@ export default function Stage1_Diagnose() {
 
   if (!remedy) return null
 
-  // Determine title
+  // Determine title — no "Meet Arjun" intro, start straight at investigation
   let title, subtitle
   if (showDiagnosis) {
     title = '🧩 Mystery Remedy'
-    subtitle = 'Can you figure out what Arjun needs today?'
+    subtitle = 'Read the riddle — then head to the lab to discover the answer!'
   } else if (showCheckup) {
     title = `Day ${state.currentDay} — Check-up`
     subtitle = "Let's see how Arjun is doing today!"
   } else {
-    title = `Day ${state.currentDay} — Meet Arjun`
+    title = `Day ${state.currentDay} — Investigate Symptoms`
     subtitle = allInvestigated
-      ? '✅ You found all the symptoms!'
-      : `Tap the glowing icons to investigate! (${investigated.size}/${SYMPTOM_POSITIONS.length})`
+      ? '✅ Great detective work! You found all the symptoms!'
+      : `Tap the glowing icons to check each symptom! (${investigated.size}/${SYMPTOM_POSITIONS.length})`
   }
 
   return (
