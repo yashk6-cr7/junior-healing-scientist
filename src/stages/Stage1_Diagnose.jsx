@@ -181,27 +181,18 @@ function MysteryRemedyCard({ day, onContinue }) {
         </p>
       </motion.div>
 
-      {/* ── Science fact — always visible, reinforces after riddle ── */}
-      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.9 }}
-        style={{
-          width: '100%', padding: '16px 18px', borderRadius: '14px',
-          background: 'rgba(0,200,83,0.08)', border: '1px solid rgba(0,200,83,0.3)',
-        }}>
-        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: '#00C853', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          🔬 Science Fact!
-        </p>
-        <p style={{ color: 'var(--color-text-primary)', fontSize: '0.88rem', lineHeight: 1.6 }}>
-          {hint.scienceFact}
-        </p>
-      </motion.div>
+      {/* ── Hint: science fact shown AFTER treatment, not here ── */}
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
+        style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', textAlign: 'center', fontStyle: 'italic' }}>
+        🔬 Discover the science fact after you prepare and give the remedy!
+      </motion.p>
 
-      {/* ── Continue — no answer reveal, child must discover in the lab ── */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
+      {/* ── Continue to lab ── */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }}
         style={{ width: '100%', maxWidth: 360 }}>
         <button className="btn-primary" onClick={onContinue}
           style={{ width: '100%', fontSize: '1rem' }}>
-          Go to the Lab &amp; Find Out! →
+          Go to the Lab & Find Out! →
         </button>
       </motion.div>
     </motion.div>
@@ -361,14 +352,11 @@ export default function Stage1_Diagnose() {
   const [investigated, setInvestigated] = useState(new Set())
   const [activeText, setActiveText] = useState(null)
   const [showDiagnosis, setShowDiagnosis] = useState(false)
-  const [showCheckup, setShowCheckup] = useState(state.currentDay > 1)
+  const [showCheckup, setShowCheckup] = useState(true) // always show symptom list first
 
   const remedy = getRemedyByDay(state.currentDay)
   const allInvestigated = investigated.size >= SYMPTOM_POSITIONS.length
   const isDay1 = state.currentDay === 1
-
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 500
-  const orbitRadius = isMobile ? 110 : 135
 
   const handleSymptomTap = useCallback((symptomId) => {
     if (investigated.has(symptomId)) return
@@ -397,19 +385,18 @@ export default function Stage1_Diagnose() {
 
   if (!remedy) return null
 
-  // Determine title — no "Meet Arjun" intro, start straight at investigation
+  // Determine title
   let title, subtitle
   if (showDiagnosis) {
     title = '🧩 Mystery Remedy'
     subtitle = 'Read the riddle — then head to the lab to discover the answer!'
   } else if (showCheckup) {
-    title = `Day ${state.currentDay} — Check-up`
-    subtitle = "Let's see how Arjun is doing today!"
-  } else {
-    title = `Day ${state.currentDay} — Investigate Symptoms`
-    subtitle = allInvestigated
-      ? '✅ Great detective work! You found all the symptoms!'
-      : `Tap the glowing icons to check each symptom! (${investigated.size}/${SYMPTOM_POSITIONS.length})`
+    title = isDay1
+      ? `Day 1 — Arjun's Symptoms`
+      : `Day ${state.currentDay} — Check-up`
+    subtitle = isDay1
+      ? "Arjun is sick! Look at his symptoms below."
+      : "Let's see how Arjun is doing today!"
   }
 
   return (
@@ -431,46 +418,10 @@ export default function Stage1_Diagnose() {
         </p>
       </motion.div>
 
-      {/* ── Day 2-7: Daily Checkup ── */}
+      {/* Symptom list — shown for all days */}
       {showCheckup && (
         <DailyCheckup day={state.currentDay} onContinue={handleContinue} />
       )}
-
-      {/* ── Day 1: Character + floating symptoms ── */}
-      {isDay1 && !showDiagnosis && !showCheckup && (
-        <div style={{
-          position: 'relative',
-          width: orbitRadius * 2 + 80, height: orbitRadius * 2 + 80,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <div style={{
-            position: 'absolute', width: orbitRadius * 2, height: orbitRadius * 2,
-            borderRadius: '50%', border: '1px dashed rgba(255,255,255,0.07)', pointerEvents: 'none',
-          }} />
-          <PatientCharacter health={state.patientHealth} size={isMobile ? 120 : 150} showLabel={false} />
-          {SYMPTOM_POSITIONS.map(sym => (
-            <SymptomIcon key={sym.id} symptom={sym}
-              isInvestigated={investigated.has(sym.id)}
-              onTap={() => handleSymptomTap(sym.id)}
-              orbitRadius={orbitRadius} angle={sym.angleDeg} />
-          ))}
-        </div>
-      )}
-
-      {/* Investigate text popup (Day 1 only) */}
-      <AnimatePresence>
-        {activeText && !showDiagnosis && (
-          <motion.div key={activeText}
-            initial={{ scale: 0.8, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }} transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-            className="glass-card"
-            style={{ padding: '14px 20px', maxWidth: 340, textAlign: 'center', borderColor: 'rgba(255,215,0,0.3)' }}>
-            <p className="game-text" style={{ fontSize: 'clamp(0.9rem, 3vw, 1.05rem)', lineHeight: 1.5 }}>
-              {activeText}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Mystery Remedy card */}
       <AnimatePresence>
@@ -478,16 +429,6 @@ export default function Stage1_Diagnose() {
           <MysteryRemedyCard day={state.currentDay} onContinue={handleContinue} />
         )}
       </AnimatePresence>
-
-      {/* Patient label (Day 1 only, when idle) */}
-      {isDay1 && !showDiagnosis && !activeText && (
-        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', fontFamily: 'var(--font-heading)', textAlign: 'center' }}>
-          {state.patientHealth === 'sick' && '😟 Arjun needs your help!'}
-          {state.patientHealth === 'recovering' && '🙂 Arjun is getting better!'}
-          {state.patientHealth === 'healthy' && '🎉 Arjun feels great!'}
-        </motion.p>
-      )}
     </div>
   )
 }

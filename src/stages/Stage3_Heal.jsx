@@ -21,6 +21,7 @@ import { ACTIONS } from '../context/GameContext'
 import { getBadgeForDay, BADGES } from '../data/badges'
 import { getRemedyByDay } from '../data/remedies'
 import { FLASHCARDS } from '../data/flashcards'
+import { MYSTERY_HINTS } from '../data/hints'
 
 export default function Stage3_Heal() {
   const { state, dispatch } = useGameState()
@@ -30,6 +31,7 @@ export default function Stage3_Heal() {
   const remedy = getRemedyByDay(state.currentDay)
   const badge = getBadgeForDay(state.currentDay)
   const flashcard = FLASHCARDS[`day${state.currentDay}`]
+  const hint = MYSTERY_HINTS[state.currentDay]
 
   // Determine Arjun's health state based on progress
   const healthState = useMemo(() => {
@@ -283,6 +285,32 @@ export default function Stage3_Heal() {
             science={flashcard.science}
             onDismiss={() => setPhase('done')}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Science Fact — shown after treatment in 'done' phase */}
+      <AnimatePresence>
+        {phase === 'done' && hint && (
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ delay: 0.2, type: 'spring', damping: 18 }}
+            style={{
+              width: '100%', maxWidth: '420px', padding: '18px 20px',
+              borderRadius: '16px', zIndex: 20,
+              background: 'rgba(0,200,83,0.08)',
+              border: '1px solid rgba(0,200,83,0.35)',
+              boxShadow: '0 0 30px rgba(0,200,83,0.1)',
+            }}
+          >
+            <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#00C853', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              🔬 Science Fact Unlocked!
+            </p>
+            <p style={{ color: 'var(--color-text-primary)', fontSize: '0.88rem', lineHeight: 1.65 }}>
+              {hint.scienceFact}
+            </p>
+          </motion.div>
         )}
       </AnimatePresence>
 
