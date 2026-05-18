@@ -575,11 +575,22 @@ export default function Stage2_Prepare() {
     )
   }
 
-  // ═══ HEAT PHASE — Thermometer ═══
+  // ═══ HEAT PHASE — Thermometer + Boiling Pot ═══
   if (phase === 'heat') {
     const fillH = Math.max(0, ((temperature - 20) / 70) * 200)
+    const tempColor = temperature < 50 ? '#40C4FF' : temperature < 75 ? '#FFB74D' : '#FF5722'
+    const boilIntensity = Math.max(0, (temperature - 30) / 60) // 0 → 1 as temp 30→90°C
+    const numBubbles = Math.floor(boilIntensity * 8) + (boilIntensity > 0 ? 2 : 0)
+    const showSteam = temperature > 60
+    const liquidColor = temperature < 50
+      ? remedy.color + '88'
+      : temperature < 75
+        ? remedy.color + 'bb'
+        : remedy.color + 'ee'
+    const bubbleSpeed = Math.max(0.4, 1.8 - boilIntensity * 1.4) // faster as hotter
+
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', padding: '72px 16px 100px', gap: '12px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', padding: '60px 16px 100px', gap: '10px' }}>
         <h2 className="font-heading" style={{ color: remedy.color, fontSize: 'clamp(1.2rem, 4vw, 1.6rem)' }}>
           🧪 Prepare the Remedy
         </h2>
@@ -587,63 +598,215 @@ export default function Stage2_Prepare() {
           Find the right ingredients, mix them, and heat to the perfect temperature!
         </p>
         <StepIndicator />
-        <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>Hold the flame to heat! Find the sweet spot 🔥</p>
-        <p style={{ color: remedy.color, fontSize: '2rem', fontWeight: 800 }}>{Math.round(temperature)}°C</p>
+        <p style={{ color: '#f5c842', fontWeight: 600, fontSize: '0.9rem' }}>
+          Hold the flame to heat! Find the sweet spot 🔥
+        </p>
+        <p style={{ color: tempColor, fontSize: '2rem', fontWeight: 800, transition: 'color 0.3s' }}>
+          {Math.round(temperature)}°C
+        </p>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.85rem' }}>{tempLabel}</p>
 
-        {/* Thermometer */}
-        <div style={{ position: 'relative', width: '50px', height: '220px' }}>
-          {/* Tube */}
-          <div style={{
-            position: 'absolute', left: '50%', transform: 'translateX(-50%)',
-            width: '28px', height: '200px', bottom: '20px',
-            borderRadius: '14px', background: 'rgba(255,255,255,0.08)',
-            border: '2px solid rgba(255,255,255,0.15)', overflow: 'hidden',
-          }}>
-            {/* Fill */}
+        {/* ── Side-by-side: Thermometer + Boiling Pot ── */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '32px', marginTop: '4px' }}>
+
+          {/* Thermometer */}
+          <div style={{ position: 'relative', width: '50px', height: '240px', flexShrink: 0 }}>
+            {/* Tube */}
             <div style={{
-              position: 'absolute', bottom: 0, width: '100%', height: `${fillH}px`,
-              background: temperature < 50 ? '#40C4FF' : temperature < 75 ? '#FFB74D' : '#FF5722',
-              transition: 'height 0.1s, background 0.3s',
-              borderRadius: '0 0 12px 12px',
-            }} />
-            {/* Tick marks */}
-            {[25, 50, 75].map(t => (
-              <div key={t} style={{
-                position: 'absolute', bottom: `${((t - 20) / 70) * 200}px`, width: '100%', height: '1px',
-                borderTop: '1px dashed rgba(255,255,255,0.2)',
+              position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+              width: '28px', height: '200px', bottom: '20px',
+              borderRadius: '14px', background: 'rgba(255,255,255,0.06)',
+              border: '2px solid rgba(255,255,255,0.15)', overflow: 'hidden',
+            }}>
+              {/* Fill */}
+              <motion.div
+                animate={{ height: `${fillH}px` }}
+                transition={{ type: 'tween', ease: 'linear', duration: 0.15 }}
+                style={{
+                  position: 'absolute', bottom: 0, width: '100%',
+                  background: tempColor,
+                  borderRadius: '0 0 12px 12px',
+                  boxShadow: `0 0 10px ${tempColor}88`,
+                  transition: 'background 0.3s',
+                }}
+              />
+              {/* Target zone indicator */}
+              <div style={{
+                position: 'absolute',
+                bottom: `${((remedy.targetTemp - 5 - 20) / 70) * 200}px`,
+                height: `${(10 / 70) * 200}px`,
+                width: '100%',
+                background: 'rgba(0,200,83,0.2)',
+                borderTop: '1px dashed rgba(0,200,83,0.7)',
+                borderBottom: '1px dashed rgba(0,200,83,0.7)',
               }} />
-            ))}
+              {/* Tick marks */}
+              {[40, 60, 80].map(t => (
+                <div key={t} style={{
+                  position: 'absolute', bottom: `${((t - 20) / 70) * 200}px`,
+                  width: '100%', height: '1px',
+                  borderTop: '1px dashed rgba(255,255,255,0.2)',
+                }} />
+              ))}
+            </div>
+            {/* Bulb */}
+            <motion.div
+              animate={{ boxShadow: isHeating ? `0 0 20px ${tempColor}` : 'none' }}
+              style={{
+                position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: tempColor, transition: 'background 0.3s',
+              }}
+            />
+            {/* Temp labels */}
+            <span style={{ position: 'absolute', right: '100%', bottom: `${((remedy.targetTemp - 20) / 70) * 200 + 14}px`,
+              fontSize: '0.6rem', color: '#00C853', whiteSpace: 'nowrap', marginRight: '4px', fontWeight: 700 }}>
+              🎯
+            </span>
           </div>
-          {/* Bulb */}
-          <div style={{
-            position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-            width: '36px', height: '36px', borderRadius: '50%',
-            background: temperature < 50 ? '#40C4FF' : temperature < 75 ? '#FFB74D' : '#FF5722',
-            transition: 'background 0.3s',
-          }} />
+
+          {/* Boiling Pot */}
+          <div style={{ position: 'relative', width: '160px', flexShrink: 0 }}>
+            {/* Steam wisps above pot */}
+            <div style={{ position: 'relative', height: '80px', overflow: 'visible' }}>
+              {showSteam && Array.from({ length: 5 }).map((_, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ y: 0, opacity: 0.7, scaleX: 1 }}
+                  animate={{ y: -70, opacity: 0, scaleX: [1, 1.4, 0.8, 1.2, 0] }}
+                  transition={{
+                    duration: bubbleSpeed * 1.8,
+                    repeat: Infinity,
+                    delay: i * (bubbleSpeed * 0.4),
+                    ease: 'easeOut',
+                  }}
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: `${20 + i * 28}px`,
+                    width: '14px', height: '28px',
+                    borderRadius: '50%',
+                    background: `rgba(255,255,255,${0.08 + boilIntensity * 0.12})`,
+                    filter: 'blur(4px)',
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Pot body */}
+            <div style={{
+              position: 'relative',
+              width: '160px', height: '130px',
+              background: 'rgba(255,255,255,0.06)',
+              border: `2px solid rgba(255,255,255,0.15)`,
+              borderRadius: '0 0 28px 28px',
+              borderTop: 'none',
+              overflow: 'hidden',
+            }}>
+              {/* Liquid fill */}
+              <motion.div
+                animate={{ height: `${70 + boilIntensity * 20}px` }}
+                style={{
+                  position: 'absolute', bottom: 0, left: 0, right: 0,
+                  background: `linear-gradient(180deg, ${liquidColor} 0%, ${remedy.color}cc 100%)`,
+                  transition: 'background 0.5s',
+                  borderRadius: '0 0 26px 26px',
+                }}
+              >
+                {/* Liquid surface wave */}
+                <motion.div
+                  animate={{ x: [0, -20, 0, 20, 0] }}
+                  transition={{ duration: bubbleSpeed * 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                  style={{
+                    position: 'absolute', top: -8, left: -10, right: -10, height: '16px',
+                    background: liquidColor,
+                    borderRadius: '50%',
+                  }}
+                />
+
+                {/* Bubbles rising inside liquid */}
+                {Array.from({ length: numBubbles }).map((_, i) => {
+                  const size = 6 + Math.random() * 10
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ y: 0, opacity: 0.9 }}
+                      animate={{ y: -(70 + boilIntensity * 20), opacity: [0.9, 0.7, 0] }}
+                      transition={{
+                        duration: bubbleSpeed + Math.random() * 0.4,
+                        repeat: Infinity,
+                        delay: i * (bubbleSpeed * 0.25),
+                        ease: 'easeOut',
+                      }}
+                      style={{
+                        position: 'absolute',
+                        bottom: `${Math.random() * 20}px`,
+                        left: `${10 + i * (130 / numBubbles)}px`,
+                        width: `${size}px`, height: `${size}px`,
+                        borderRadius: '50%',
+                        background: `rgba(255,255,255,${0.3 + boilIntensity * 0.4})`,
+                        border: '1px solid rgba(255,255,255,0.5)',
+                        boxShadow: `0 0 4px rgba(255,255,255,0.3)`,
+                      }}
+                    />
+                  )
+                })}
+              </motion.div>
+
+              {/* Flame glow at bottom when heating */}
+              {isHeating && (
+                <motion.div
+                  animate={{ opacity: [0.4, 0.8, 0.4] }}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                  style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0, height: '30px',
+                    background: 'linear-gradient(0deg, rgba(255,109,0,0.5), transparent)',
+                    borderRadius: '0 0 26px 26px',
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Pot rim */}
+            <div style={{
+              width: '176px', height: '14px', marginLeft: '-8px',
+              background: 'rgba(255,255,255,0.12)',
+              border: '2px solid rgba(255,255,255,0.2)',
+              borderRadius: '8px',
+              position: 'relative', zIndex: 2,
+            }} />
+
+            {/* Flame label */}
+            {isHeating && (
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                style={{ textAlign: 'center', marginTop: '6px', fontSize: '1.4rem' }}>
+                🔥🔥🔥
+              </motion.div>
+            )}
+          </div>
         </div>
 
         {/* Ingredient icons */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
           {bowlItems.map(item => <span key={item.id} style={{ fontSize: '1.5rem' }}>{item.emoji}</span>)}
         </div>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}>Hold the flame to heat!</p>
 
         {/* Flame button */}
         <motion.button
           onMouseDown={() => setIsHeating(true)} onMouseUp={() => setIsHeating(false)} onMouseLeave={() => setIsHeating(false)}
           onTouchStart={() => setIsHeating(true)} onTouchEnd={() => setIsHeating(false)}
           whileTap={{ scale: 0.9 }}
+          animate={{ boxShadow: isHeating ? '0 0 40px rgba(255,109,0,0.6)' : '0 0 0px transparent' }}
           style={{
-            width: '72px', height: '72px', borderRadius: '50%', fontSize: '2rem',
+            width: '80px', height: '80px', borderRadius: '50%', fontSize: '2.2rem',
             background: isHeating ? 'rgba(255,109,0,0.4)' : 'rgba(255,109,0,0.15)',
             border: `3px solid ${isHeating ? '#FF6D00' : 'rgba(255,109,0,0.3)'}`,
-            cursor: 'pointer', transition: 'all 0.2s',
-            boxShadow: isHeating ? '0 0 30px rgba(255,109,0,0.5)' : 'none',
+            cursor: 'pointer', transition: 'background 0.2s, border 0.2s',
           }}>
           🔥
         </motion.button>
+        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem' }}>Hold the flame to heat!</p>
       </div>
     )
   }
